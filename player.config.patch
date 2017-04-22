@@ -1,4 +1,4 @@
 [
-{ "op": "add", "path" : "/companionsConfig/scripts/-", "value" : "/scripts/companions/recruitspawnerextended.lua"}
+{ "op": "add", "path" : "/companionsConfig/scripts/-", "value" : "/scripts/companions/companionsextended.lua"}
 ]
 

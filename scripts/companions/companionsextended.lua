@@ -1,6 +1,6 @@
 --require "/scripts/npcspawnutil.lua"
 local oldOnOwnShip = onOwnShip
-onOwnShip = nil
+--onOwnShip = nil
 function onOwnShip()
   sb.logInfo("--- This is a Test!!!! : onOwnShip called ----")
   local returnData = oldOnOwnShip()
