@@ -2,50 +2,39 @@
 --I GOT PLANS BABY...I GOT PLANS
 local oldInitCE = init
 function init()
-  require "/scripts/crewutil.lua"
+  require "/scripts/companions/crewutil.lua"
   dLog("modArmor Companions Init")
-  logENV()
   return oldInitCE()
 end
 
 Recruit._oldSpawnCE = Recruit._spawn
-function Recruit._spawn(asSelf, position, parameters)
+function Recruit:_spawn(position, parameters)
 	dLog("spawning Recruit")
-	dLogJson(asSelf:toJson(), "selfALL", true)
-	local items = path(asSelf.spawnConfig, "scriptConfig","personality","storedOverrides", "items")
-	local override = nil
-	if not items then
-		items = buildItemOverrideTable()
-		override = items.override[1][2][1]
-		for k,v in pairs(asSelf.storage.itemSlots) do
-			if v then
-				override[k] = {}
-				table.insert(override[k], v)
-			end
+	dLogJson(self:toJson(), "selfALL", true)
+	local items = path(self.spawnConfig, "scriptConfig","personality","storedOverrides", "items","override",1,2,1) or {}
+	local hasArmor, hasWeapons = crewutil.outfitCheck(items)
+	local shouldEquip = crewutil.buildEquipTable(not hasArmor, not hasWeapons)
+	for k,v in pairs(self.storage.itemSlots) do
+		if v and shouldEquip[k] then
+			items[k] = {}
+			table.insert(items[k], v)
 		end
-	else
-		override = path(items,"override",1,2,1)
-	end
-	if override and ((override.primary or override.alt) and (override.sheathedprimary or override.sheathedalt)) then
+	end	
+	local itemTable = crewutil.buildItemOverrideTable(items)
+	
+	if (items.primary or items.alt) and (items.sheathedprimary or items.sheathedalt) then
 		setPath(parameters.scriptConfig, "behaviorConfig", "emptyHands", false)
 	end
-	parameters.items = items
-	setPath(parameters.scriptConfig,"crew","uniformSlots",jobject())
-	local returnValue = asSelf:_oldSpawnCE(position, parameters)
-	return returnValue
-end
-
-function buildItemOverrideTable()
-	local items = {}
-	local container = nil
-	items.override = {}
-
-	table.insert(items.override, {})
-	container = items.override[1]
-	table.insert(container, 0)
-	table.insert(container, {})
-	container = items.override[1][2]
-	table.insert(container, {})
-	return items
+	parameters.items = itemTable
+	setPath(parameters.scriptConfig,"initialStorage","itemSlots", {})
+	if hasArmor then
+		setPath(parameters.scriptConfig,"crew","uniformSlots",{})
+	end
+	if hasArmor or hasWeapons then
+		setPath(self.spawnConfig, "scriptConfig","personality","storedOverrides","items",itemTable)
+	end
+	
+	dLogJson(parameters, "params", true)
+	return self:_oldSpawnCE(position, parameters)
 end
 

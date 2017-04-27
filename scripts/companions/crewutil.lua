@@ -1,4 +1,5 @@
 dComp = {}
+crewutil = {}
 function dLog(item, prefix)
   if not prefix then prefix = "" end
   if type(item) ~= "string" then
@@ -89,13 +90,6 @@ function toBool(value)
     return nil
 end
 
-function npcUtil.checkIfNpcIs(v, npcConfig,typeParams)
-    for k,v2 in pairs(typeParams) do
-      local value = jsonPath(npcConfig, k)
-      if (value and v2) then return true end
-    end
-    return false
-end
 function logENV()
   for i,v in pairs(_ENV) do
     if type(v) == "function" then
@@ -107,3 +101,81 @@ function logENV()
     end
   end
 end
+
+function crewutil.outfitCheck(outfit)
+  local hasArmor, hasWeapons = false, false
+  local weapSlots = {"primary","sheathedprimary","alt","sheathedalt"}
+  local outfitCount = jsize(outfit)
+  for _,v in pairs(weapSlots) do
+    if outfit.v ~= nil then
+      outfitCount = outfitCount - 1; hasWeapons = true 
+    end
+  end
+  if outfitCount > 0 then hasArmor = true end
+  return hasArmor, hasWeapons
+end
+
+function crewutil.buildItemOverrideTable(t)
+
+  local items = {}
+  local container = nil
+  t = t or {}
+
+  items.override = {}
+  table.insert(items.override, {})
+  container = items.override[1]
+  table.insert(container, 0)
+  table.insert(container, {})
+  container = items.override[1][2]
+  table.insert(container, t)
+  return items
+end
+
+function crewutil.buildEquipTable(equipArmor, equipWeap)   
+  return {primary = equipWeap,
+            alt = equipWeap,
+            sheathedprimary = equipWeap,
+            sheathedalt = equipWeap,
+            head = equipArmor,
+            headCosmetic = equipArmor,
+            chest = equipArmor,
+            chestCosmetic = equipArmor,
+            legs = equipArmor,
+            legsCosmetic = equipArmor,
+            back = equipArmor,
+            backCosmetic = equipArmor}
+end
+
+function setPath(t, ...)
+  local args = {...}
+  --sb.logInfo("args are %s", args)
+  if #args < 2 then return end
+
+  for i,child in ipairs(args) do
+    if i == #args - 1 then
+      t[child] = args[#args]
+      return
+    else
+      t[child] = t[child] or {}
+      t = t[child]
+    end
+  end
+end
+
+
+--FUNCTIONS TO REMEMBER--
+--[[
+============NPC COMBAT BEHAVIOR===========
+===  /stagehands/coordinator/npccombat ===
+  function rangedWeaponRanges(npcId, ranged)
+    local item = world.entityHandItem(npcId, "primary")
+    local gunRanges = config.getParameter("npcCombat.rangedWeaponRanges")
+    return gunRanges[item] or gunRanges.default
+  end
+  
+  function meleeWeaponRanges(npcId, ranged)
+    local item = world.entityHandItem(npcId, "primary")
+    local weaponRanges = config.getParameter("npcCombat.meleeWeaponRanges")
+    return weaponRanges[item] or weaponRanges.default
+  end
+--]]
