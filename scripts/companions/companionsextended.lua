@@ -1,22 +1,20 @@
 --require "/scripts/npcspawnutil.lua"
 --I GOT PLANS BABY...I GOT PLANS
-local oldInitCompanionsExtended = init
+local oldInitCE = init
 function init()
-  require "/scripts/npcspawnutil.lua"
-  dLog("companions Init")
-  return oldInitCompanionsExtended()
+  require "/scripts/crewutil.lua"
+  dLog("modArmor Companions Init")
+  logENV()
+  return oldInitCE()
 end
 
 Recruit._oldSpawnCE = Recruit._spawn
 function Recruit._spawn(asSelf, position, parameters)
 	dLog("spawning Recruit")
-	--dLogJson(asSelf.spawnConfig, "selfSpawnConfig", true)
 	dLogJson(asSelf:toJson(), "selfALL", true)
 	local items = path(asSelf.spawnConfig, "scriptConfig","personality","storedOverrides", "items")
 	local override = nil
-	local addItems = false
 	if not items then
-		addItems = true
 		items = buildItemOverrideTable()
 		override = items.override[1][2][1]
 		for k,v in pairs(asSelf.storage.itemSlots) do
@@ -31,8 +29,8 @@ function Recruit._spawn(asSelf, position, parameters)
 	if override and ((override.primary or override.alt) and (override.sheathedprimary or override.sheathedalt)) then
 		setPath(parameters.scriptConfig, "behaviorConfig", "emptyHands", false)
 	end
-	setPath(parameters.scriptConfig,"crew","uniformSlots",jobject())
 	parameters.items = items
+	setPath(parameters.scriptConfig,"crew","uniformSlots",jobject())
 	local returnValue = asSelf:_oldSpawnCE(position, parameters)
 	return returnValue
 end
