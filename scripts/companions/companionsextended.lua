@@ -9,10 +9,10 @@ end
 
 Recruit._oldSpawnCE = Recruit._spawn
 function Recruit:_spawn(position, parameters)
-	dLog("spawning Recruit")
-	dLogJson(self:toJson(), "selfALL", true)
-	local items = path(self.spawnConfig, "scriptConfig","personality","storedOverrides", "items","override",1,2,1) or {}
-	local hasArmor, hasWeapons = crewutil.outfitCheck(items)
+	local items = path(self.spawnConfig.parameters,"scriptConfig","personality","storedOverrides","items","override",1,2,1) or {}
+	local hasArmor = false
+	local hasWeapons = false
+	hasArmor, hasWeapons = crewutil.outfitCheck(items)
 	local shouldEquip = crewutil.buildEquipTable(not hasArmor, not hasWeapons)
 	for k,v in pairs(self.storage.itemSlots) do
 		if v and shouldEquip[k] then
@@ -31,10 +31,9 @@ function Recruit:_spawn(position, parameters)
 		setPath(parameters.scriptConfig,"crew","uniformSlots",{})
 	end
 	if hasArmor or hasWeapons then
-		setPath(self.spawnConfig, "scriptConfig","personality","storedOverrides","items",itemTable)
+		setPath(self.spawnConfig.parameters,"scriptConfig","personality","storedOverrides","items",itemTable)
 	end
-	
-	dLogJson(parameters, "params", true)
-	return self:_oldSpawnCE(position, parameters)
+	self:_oldSpawnCE(position, parameters)
+	self.spawner:markDirty()
 end
 

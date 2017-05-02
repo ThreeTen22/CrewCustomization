@@ -103,15 +103,12 @@ function logENV()
 end
 
 function crewutil.outfitCheck(outfit)
-  local hasArmor, hasWeapons = false, false
+  local hasArmor = false
+  local hasWeapons = false
   local weapSlots = {"primary","sheathedprimary","alt","sheathedalt"}
-  local outfitCount = jsize(outfit)
-  for _,v in pairs(weapSlots) do
-    if outfit.v ~= nil then
-      outfitCount = outfitCount - 1; hasWeapons = true 
-    end
-  end
-  if outfitCount > 0 then hasArmor = true end
+  local armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"}
+  hasWeapons = crewutil.tableHasAnyValue(weapSlots, outfit)
+  hasArmor = crewutil.tableHasAnyValue(armorSlots, outfit)
   return hasArmor, hasWeapons
 end
 
@@ -162,6 +159,11 @@ function setPath(t, ...)
   end
 end
 
+function crewutil.tableHasAnyValue(t1, t2)
+  for _,v in ipairs(t1) do
+    if type(t2[v]) ~= "nil" then return true end
+  end
+end
 
 --FUNCTIONS TO REMEMBER--
 --[[

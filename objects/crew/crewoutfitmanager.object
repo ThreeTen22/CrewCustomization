@@ -1,0 +1,57 @@
+{
+  "objectName" : "crewoutfitmanager",
+  "tags" : ["misc"],
+  "rarity" : "Common",
+  "description" : "Manage your crewmember's outfit and weapons",
+  "shortdescription" : "The Armory",
+  "subtitle" : "Good luck figuring that out",
+  "race" : "generic",
+  "price" : 15000,
+  "category" : "spawner",
+  "tooltipKind" : "object",
+  "genericDescription" : "It's a thing that does stuff.",
+  "objectType" : "container",
+  "slotCount" : 12,
+  "openSounds" : ["/sfx/objects/miningchest_open.ogg"],
+  "frameCooldown" : 5,
+  "autoCloseCooldown" : 3600,
+  "scripts" : ["/objects/crew/outfitobjectscript.lua"],
+  "scriptDelta" : 30,
+  "smashOnBreak" : false,
+  "inventoryIcon" : "backgroundpanel.png",
+  "isContainer": true,
+  "smashable" : false,
+  "interactive" : true,
+  "orientations" : [
+    {
+      "image" : "backgroundpanel.png",
+      "imagePosition" : [-8, 0],
+      "frames" : 1,
+      "animationCycle" : 0.5,
+      "direction" : "left",
+      "flipImages" : true,
+      "animationPosition" : [-8, 0],
+      "lightPosition" : [0, 3],
+      "spaceScan" : 0.1,
+      "anchors" : [ "background" ]
+    },
+    {
+      "image" : "backgroundpanel.png",
+      "imagePosition" : [-8, 0],
+      "frames" : 1,
+      "animationCycle" : 0.5,
+      "direction" : "right",
+      "flipImages" : false,
+      "animationPosition" : [-8, 0],
+      "lightPosition" : [0, 3],
+
+      "spaceScan" : 0.1,
+      "anchors" : [ "background" ]
+    }
+  ],
+  "npcArgs" : {
+
+  },
+  "uiConfig" : "/objects/crew/outfitpane.config"
+}
+

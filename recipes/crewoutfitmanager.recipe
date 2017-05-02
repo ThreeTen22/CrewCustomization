@@ -1,0 +1,7 @@
+{
+  "input" : [
+  	{ "item" : "money", "count" : 2500 }
+  ],
+  "output" : { "item" : "crewoutfitmanager", "count" : 1},
+  "groups" : [ "spawnerstation", "all" ]
+}
