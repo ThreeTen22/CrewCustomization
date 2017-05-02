@@ -1,10 +1,39 @@
 --require "/scripts/npcspawnutil.lua"
 --I GOT PLANS BABY...I GOT PLANS
+
+outfit = {}
+outfit.__index = outfit
+
+function outfit.new(...)
+  local self = setmetatable({}, outfit)
+  self:init(...)
+  return self
+end
+
+function outfit:init(json)
+end
+
+
+outfitManager = {}
+
+function outfitManager:init()
+	for uuid, follower in (recruitSpawner.followers) do
+		dCompare("outfitManager init", uuid, follower)
+	end
+end
+
+
+function outfitManager:update(dt)
+	dLog("outfitManager: updating")
+	return false
+end
+outfitManager.finished = outfitManager.update
+
 local oldInitCE = init
 function init()
-  require "/scripts/companions/crewutil.lua"
-  dLog("modArmor Companions Init")
-  return oldInitCE()
+  local returnValue = oldInitCE()
+  outfitManager:init()
+  return returnValue
 end
 
 Recruit._oldSpawnCE = Recruit._spawn

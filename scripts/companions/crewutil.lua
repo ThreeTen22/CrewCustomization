@@ -165,6 +165,10 @@ function crewutil.tableHasAnyValue(t1, t2)
   end
 end
 
+function crewutil.getPlanetType()
+  return world.terrestrial() and world.planetType()
+end
+
 --FUNCTIONS TO REMEMBER--
 --[[
 ============NPC COMBAT BEHAVIOR===========
