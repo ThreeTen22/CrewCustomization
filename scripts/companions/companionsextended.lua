@@ -5,7 +5,7 @@
 wardrobeManager = {}
 
 wardrobe = {}
-wardrobe.__index = outfit
+wardrobe.__index = wardrobe
 
 
 outfit = {}
@@ -17,7 +17,7 @@ function outfit.new(...)
   return self
 end
 
-function outfit:init(storedOutfit)
+function outfit:init(recruitUuId,storedOutfit)
 	if storedOutfit then
 		self.hasArmor = storedOutfit.hasArmor
 		self.hasWeapons = storedOutfit.hasWeapons
@@ -25,29 +25,31 @@ function outfit:init(storedOutfit)
 		self.planetTypes = storeOutfit.planetTypes
 		self.name = storeOutfit.name
 	else	
-		self:buildOutfit()
+		local recruit = recruitSpawner:getRecruit(recruitUuId)
+		self:buildOutfit(recruit)
 	end
 end
 
-function outfit:buildOutfit()
+function outfit:buildOutfit(recruit)
 	local items = {}
 
 	--get starting weapons
-	local variant = self:createVariant()
+	local variant = recruit:createVariant()
 
 	for i, slot in ipairs(crewutil.weapSlots) do
 		if variant.items[slot] then
-			items[slot] = {},
+			items[slot] = jarray()
 			table.insert(items[slot], variant.items[slot].content)
 		end
 	end
 	--get starting outfit, building it due to FU not using the items override parameter
-	local defaultUniform = self.spawnConfig.scriptConfig.crew.defaultUniform
-	local colorIndex = self.spawnConfig.scriptConfig.crew.role.uniformColorIndex
-	for _,slot in ipairs(self.spawnConfig.scriptConfig.crew.uniformSlots) do
+	local crewConfig = root.npcConfig(recruit.spawnConfig.type).scriptConfig.crew
+	local defaultUniform = crewConfig.defaultUniform
+	local colorIndex = crewConfig.role.uniformColorIndex
+	for _,slot in ipairs(crewConfig.uniformSlots) do
 		local item = defaultUniform[slot]
 		if item then
-			items[slot] = {}
+			items[slot] = jarray()
 			table.insert(items[slot], crewutil.dyeUniformItem(items[slot], colorIndex))
 		end
 	end	
@@ -85,7 +87,8 @@ function outfit:overrideParams(parameters)
 	if self.hasArmor then
 		setPath(parameters.scriptConfig,"crew","uniformSlots",{})
 	else
-		setPath(parameters.scriptConfig,"crew","uniformSlots",{})
+		local slots = path(parameters.scriptConfig,"crew","uniformSlots")
+		if slots and jsize(slots) == 0 then parameters.scriptConfig.crew.uniformSlots = nil end
 	end
 	return parameters
 end
@@ -97,21 +100,39 @@ function wardrobe.new(...)
 end
 
 function wardrobe:init(recruitUuId)
-	for uuid, follower in pairs(recruitSpawner.followers)
-		local storedWardrobe = storage.wardrobes[uuid]
-		self.outfits = outfit.new(recruitUuId, storedWardrobe)
-	end
-	self:mapOutfits()
+	local storedWardrobe = storage.wardrobes[recruitUuId]
+	self.outfits = {}
+	self:loadOutfits(recruitUuId, storedWardrobe)
+	self.outfitMap = self:mapOutfits()
 end
+
+function wardrobe:loadOutfits(recruitUuId, storedWardrobe)
+	if not (storedWardrobe and storedWardrobe.outfits[recruitUuId]) then
+		self.outfits["default"] = outfit.new(recruitUuId)
+		return
+	end
+	for k,v in pairs(storedWardrobe.outfits[recruitUuId]) do
+		self.outfits[k] = outfit.new(recruitUuId, v)
+	end
+end
+
+
+function wardrobe:getOutfit()
+	return self.outfitMap[wardrobeManager.planetType]
+end
+
 
 function wardrobe:mapOutfits(recruitUuId)
 	local outfitMap = {}
-	for _,v in ipairs(self.outfits) do
-		outfitMap[v] = {}
+	for planet,_ in pairs(wardrobeManager.planetTypes) do
+		for k, outfit in pairs(self.outfits) do
+			if outfit.planetTypes[planet] then
+				outfitMap[planet] = outfit
+			end
+		end
 	end
-
+	return outfitMap
 end
-
 
 function wardrobeManager:init()
 	if not storage.wardrobes then storage.wardrobes = {} end
@@ -122,6 +143,10 @@ function wardrobeManager:init()
 	for uuid, follower in pairs(recruitSpawner.followers) do
 		self.wardrobes[uuid] = wardrobe.new(uuid) 
 	end
+	for uuid, follower in pairs(recruitSpawner.shipCrew) do
+		self.wardrobes[uuid] = wardrobe.new(uuid) 
+	end
+
 
 	promises:add(wardrobeManager)
 end
@@ -133,11 +158,11 @@ wardrobeManager.finished = wardrobeManager.update
 
 --first, clean up any residual outfits from crew.
 function wardrobeManager:storeOutfits()
-	for uuid, outfit in pairs(self.outfits) do
+	for uuid, wardrobe in pairs(self.wardrobes) do
 		if recruitSpawner:getRecruit(uuid) then
-			if not storage.outfits[uuid] then
-				storage.outfits[uuid] = {}
-				storage.outfits[uuid].default = outfit:toJson()
+			if not storage.wardrobes[uuid] then
+				storage.wardrobes[uuid] = {}
+				storage.wardrobes[uuid].outfits = wardrobe:toJson()
 			end
 		else
 			storage.outfits[uuid] = nil
@@ -146,7 +171,8 @@ function wardrobeManager:storeOutfits()
 end
 
 function wardrobeManager:getOutfit(uuid)
-	return self.outfits[uuid]
+	local wardrobe = self.wardrobes[uuid]
+	return wardrobe:getOutfit(wardrobeManager.planetType)
 end
 
 
@@ -161,58 +187,9 @@ end
 
 local oldUninitCE = uninit
 function uninit()
- 	debugOut()
  	return oldUninitCE()
 end
 
-
-function debugOut(args)
-	if not args then args = {storage = true, json = true} end
-	if args.storage then
-		dLog("----STORAGE----")
-		for k,v in pairs(storage.outfits) do
-			dLogJson(v, dOut(k), true)
-		end
-	end
-end
-
---Essentially the vanilla spawn parameters, gutted for the purpose of creating a variant npc
-function Recruit:createVariant()
-  local parameters = {}
-  util.mergeTable(parameters, self.spawnConfig.parameters)
-
-  local scriptConfig = self:_scriptConfig(parameters)
-  parameters.persistent = self.persistent
-
-  scriptConfig.initialStatus = copy(self.status) or {}
-  scriptConfig.initialStorage = util.mergeTable(scriptConfig.initialStorage or {}, self.storage or {})
-
-  -- Pets level with the player, gaining the effects of the player's armor
-  if getPetPersistentEffects then
-    -- If the player is spawning us, we gain the effects of their armor, so
-    -- ignore the monster's level.
-    parameters.level = 1
-  end
-  if self.spawner.levelOverride then
-    -- If a tether is spawning us, we get the level of the world/ship we're on.
-    parameters.level = self.spawner.levelOverride
-  end
-
-  scriptConfig.initialStatus.persistentEffects = self:getPersistentEffects()
-
-  local damageTeam = self:damageTeam()
-  parameters.damageTeamType = damageTeam.type
-  parameters.damageTeam = damageTeam.team
-  parameters.relocatable = false
-
-  if self.collar and self.collar.parameters then
-    util.mergeTable(parameters, self.collar.parameters)
-  end
-
-  local variant = self:_createVariant(parameters)
-  return variant
-
-end
 
 function Recruit:_createVariant(parameters)
 	local variant = root.npcVariant(self.spawnConfig.species, self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
@@ -229,3 +206,38 @@ function Recruit:_spawn(position, parameters)
 	return world.spawnNpc(position, self.spawnConfig.species, self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
 end
 
+--Essentially the vanilla spawn parameters, gutted for the purpose of creating a variant npc
+function Recruit:createVariant()
+  local parameters = {}
+  util.mergeTable(parameters, self.spawnConfig.parameters)
+
+  local scriptConfig = self:_scriptConfig(parameters)
+  parameters.persistent = self.persistent
+
+  scriptConfig.initialStatus = copy(self.status) or {}
+  scriptConfig.initialStorage = util.mergeTable(scriptConfig.initialStorage or {}, self.storage or {})
+
+  --[[
+  if getPetPersistentEffects then
+    parameters.level = 1
+  end
+  if self.spawner.levelOverride then
+    parameters.level = self.spawner.levelOverride
+  end
+
+  scriptConfig.initialStatus.persistentEffects = self:getPersistentEffects()
+
+  local damageTeam = self:damageTeam()
+  parameters.damageTeamType = damageTeam.type
+  parameters.damageTeam = damageTeam.team
+  parameters.relocatable = false
+
+  if self.collar and self.collar.parameters then
+    util.mergeTable(parameters, self.collar.parameters)
+  end
+  --]]
+
+  local variant = self:_createVariant(parameters)
+  return variant
+
+end

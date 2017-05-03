@@ -169,8 +169,8 @@ end
 function crewutil.getPlanetTypes()
   local output = {}
   local asset = root.assetJson("/terrestrial_worlds.config:planetTypes") 
-  for i,v in ipairs(asset) do
-    table.insert(output, v)
+  for k,v in pairs(asset) do
+    output.k = true
   end
 
   return output
@@ -178,7 +178,7 @@ function crewutil.getPlanetTypes()
 end
 
 function crewutil.getPlanetType()
-  return (world.terrestrial() or nil) and world.planetType()
+  return (world.terrestrial() or nil) and world.type()
 end
 
 --identical to recruitable.dyeUniform in terms of function,  moved colorindex to a parameter.
