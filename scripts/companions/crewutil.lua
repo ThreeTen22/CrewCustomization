@@ -1,5 +1,8 @@
 dComp = {}
-crewutil = {}
+crewutil = {
+  weapSlots = {"primary","sheathedprimary","alt","sheathedalt"},
+  armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"}
+}
 function dLog(item, prefix)
   if not prefix then prefix = "" end
   if type(item) ~= "string" then
@@ -20,15 +23,11 @@ function dLogJson(input, prefix, clean)
   if prefix ~= "true" and prefix ~= "false" and prefix then
     str = prefix..str
   end
-   local info = sb.printJson(input, clean)
-   sb.logInfo("%s", str..info)
+  if type(input) ~= "table" then return dLog(input, str) end 
+  local info = sb.printJson(input, clean)
+  sb.logInfo("%s", str..info)
 end
 
-function dPrintJson(input)
-  local info = sb.printJson(input,1)
-  sb.logInfo("%s",info)
-  return info
-end
 
 
 function dCompare(prefix, one, two)
@@ -101,15 +100,17 @@ function logENV()
     end
   end
 end
-
+--outfitCheck
+----checks for weapons and armor
+----Also sets the emptyHands behaviorConfig
 function crewutil.outfitCheck(outfit)
   local hasArmor = false
   local hasWeapons = false
-  local weapSlots = {"primary","sheathedprimary","alt","sheathedalt"}
-  local armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"}
-  hasWeapons = crewutil.tableHasAnyValue(weapSlots, outfit)
-  hasArmor = crewutil.tableHasAnyValue(armorSlots, outfit)
-  return hasArmor, hasWeapons
+  local emptyHands = false
+  hasWeapons = crewutil.tableHasAnyValue(crewutil.weapSlots, outfit)
+  hasArmor = crewutil.tableHasAnyValue(crewutil.armorSlots, outfit)
+  emptyHands = not((outfit.primary or outfit.alt) and (outfit.sheathedprimary or outfit.sheathedalt))
+  return hasArmor, hasWeapons, emptyHands
 end
 
 function crewutil.buildItemOverrideTable(t)
@@ -165,8 +166,31 @@ function crewutil.tableHasAnyValue(t1, t2)
   end
 end
 
+function crewutil.getPlanetTypes()
+  local output = {}
+  local asset = root.assetJson("/terrestrial_worlds.config:planetTypes") 
+  for i,v in ipairs(asset) do
+    table.insert(output, v)
+  end
+
+  return output
+  -- body
+end
+
 function crewutil.getPlanetType()
-  return world.terrestrial() and world.planetType()
+  return (world.terrestrial() or nil) and world.planetType()
+end
+
+--identical to recruitable.dyeUniform in terms of function,  moved colorindex to a parameter.
+function crewutil.dyeUniformItem(item, colorIndex)
+  if not item or not colorIndex then return item end
+
+  local item = copy(item)
+  if type(item) == "string" then item = { name = item, count = 1 } end
+  item.parameters = item.parameters or {}
+  item.parameters.colorIndex = colorIndex
+
+  return item
 end
 
 --FUNCTIONS TO REMEMBER--
