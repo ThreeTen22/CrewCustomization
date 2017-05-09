@@ -49,9 +49,6 @@
       "anchors" : [ "background" ]
     }
   ],
-  "npcArgs" : {
-
-  },
   "uiConfig" : "/objects/crew/outfitpane.config"
 }
 

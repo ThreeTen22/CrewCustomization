@@ -50,18 +50,21 @@ function outfit:buildOutfit(recruit)
 		local item = defaultUniform[slot]
 		if item then
 			items[slot] = jarray()
-			table.insert(items[slot], crewutil.dyeUniformItem(items[slot], colorIndex))
+			table.insert(items[slot], crewutil.dyeUniformItem(item, colorIndex))
 		end
 	end	
 
 	self.hasArmor, self.hasWeapons, self.emptyHands = crewutil.outfitCheck(items)
 	self.items = crewutil.buildItemOverrideTable(items)
+	self.planetTypes = {}
+	for k,_ in pairs(wardrobeManager.planetTypes) do
+		self.planetTypes[k] = true
+	end
 
-	self.planetTypes = copy(wardrobeManager.planetTypes)
 	self.name = "default"
 end
 
-function outfit:toJson()
+function outfit:toJson(skipTypes)
 local json = {}
 	json.items = self.items
 	json.hasArmor = self.hasArmor
@@ -75,21 +78,21 @@ end
 function outfit:overrideParams(parameters)
 	local items = self.items
 	parameters.items = items
-
 	if path(parameters.scriptConfig,"initialStorage","crewUniform") then
-		parameters.scriptConfig.initialStorage.crewUniform = nil
+		parameters.scriptConfig.initialStorage.crewUniform = {}
+	end
+	if path(parameters.scriptConfig,"initialStorage","itemSlots") then
+		parameters.scriptConfig.initialStorage.itemSlots = nil
 	end
 	if path(parameters.scriptConfig,"crew","uniform") then
 		parameters.scriptConfig.crew.uniform = {slots = {}}
 	end
 	setPath(parameters.scriptConfig, "behaviorConfig", "emptyHands", self.emptyHands)
 	
-	if self.hasArmor then
-		setPath(parameters.scriptConfig,"crew","uniformSlots",{})
-	else
-		local slots = path(parameters.scriptConfig,"crew","uniformSlots")
-		if slots and jsize(slots) == 0 then parameters.scriptConfig.crew.uniformSlots = nil end
-	end
+	--if self.hasArmor then
+	--	setPath(parameters.scriptConfig,"crew","uniformSlots",crewutil.armorSlots)
+	--	--setPath(parameters.scriptConfig,"crew","role","uniformColorIndex", "")
+	--end
 	return parameters
 end
 
@@ -107,7 +110,7 @@ function wardrobe:init(recruitUuId)
 end
 
 function wardrobe:loadOutfits(recruitUuId, storedWardrobe)
-	if not (storedWardrobe and storedWardrobe.outfits[recruitUuId]) then
+	if not (storedWardrobe and path(storedWardrobe, "outfits", recruitUuId)) then
 		self.outfits["default"] = outfit.new(recruitUuId)
 		return
 	end
@@ -117,37 +120,59 @@ function wardrobe:loadOutfits(recruitUuId, storedWardrobe)
 end
 
 
-function wardrobe:getOutfit()
-	return self.outfitMap[wardrobeManager.planetType]
+function wardrobe:toJson()
+	local json = {outfits = {}}
+	json.outfitMap = self.outfitMap
+	for k,v in pairs(self.outfits) do
+		json.outfits[k] = v:toJson()
+	end
+	return json
+	-- body
+end
+
+function wardrobe:_getOutfit()
+	local outfitName = self.outfitMap[wardrobeManager.planetType] or "default"
+	return self.outfits[outfitName]
 end
 
 
 function wardrobe:mapOutfits(recruitUuId)
 	local outfitMap = {}
 	for planet,_ in pairs(wardrobeManager.planetTypes) do
-		for k, outfit in pairs(self.outfits) do
+		for outfitName, outfit in pairs(self.outfits) do
 			if outfit.planetTypes[planet] then
-				outfitMap[planet] = outfit
+				outfitMap[planet] = outfitName
 			end
 		end
 	end
 	return outfitMap
 end
 
+local function getStorageWardrobe()
+	dLog("companions:  gettingStorageWardrobe")
+	local returnTable = {wardrobes = {}}
+
+	for k,v in pairs(storage.wardrobes) do
+		returnTable.wardrobes[k] = copy(v)
+	end
+
+	return returnTable
+end
+
 function wardrobeManager:init()
+	message.setHandler("wardrobeManager.getWardrobes",localHandler(getStorageWardrobe))
+
 	if not storage.wardrobes then storage.wardrobes = {} end
 	self.planetTypes = crewutil.getPlanetTypes()
 	self.planetType = crewutil.getPlanetType()
 	self.wardrobes = {}
 
-	for uuid, follower in pairs(recruitSpawner.followers) do
+	for uuid,_ in pairs(recruitSpawner.followers) do
 		self.wardrobes[uuid] = wardrobe.new(uuid) 
 	end
-	for uuid, follower in pairs(recruitSpawner.shipCrew) do
+	for uuid,_ in pairs(recruitSpawner.shipCrew) do
 		self.wardrobes[uuid] = wardrobe.new(uuid) 
 	end
-
-
 	promises:add(wardrobeManager)
 end
 
@@ -157,24 +182,57 @@ end
 wardrobeManager.finished = wardrobeManager.update
 
 --first, clean up any residual outfits from crew.
-function wardrobeManager:storeOutfits()
+function wardrobeManager:storeWardrobes()
 	for uuid, wardrobe in pairs(self.wardrobes) do
 		if recruitSpawner:getRecruit(uuid) then
-			if not storage.wardrobes[uuid] then
-				storage.wardrobes[uuid] = {}
-				storage.wardrobes[uuid].outfits = wardrobe:toJson()
-			end
+			--storage.wardrobes[uuid] = {}
+			storage.wardrobes[uuid] = wardrobe:toJson()
 		else
-			storage.outfits[uuid] = nil
+			storage.wardrobes[uuid] = nil
 		end
 	end
 end
 
-function wardrobeManager:getOutfit(uuid)
-	local wardrobe = self.wardrobes[uuid]
-	return wardrobe:getOutfit(wardrobeManager.planetType)
+local function setWardrobe(args)
+	local uuid, wardrobe, outfits = args.uuid, args.wardrobe, args.outfits
+	storage.wardrobes[uuid] = wardrobe
+	storage.wardrobes[uuid].outfits = outfits
 end
 
+function wardrobeManager:getOutfit(uuid)
+	local wardrobe = self.wardrobes[uuid]
+	return wardrobe:_getOutfit(self.planetType)
+end
+
+function Recruit:_spawn(position, parameters)
+	local outfit = wardrobeManager:getOutfit(self.podUuid)
+	if outfit then
+		outfit:overrideParams(parameters)
+	end
+	dLogJson(parameters, "Recruit: Spawn: ", true)
+	return world.spawnNpc(position, self.spawnConfig.species,  self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
+end
+
+--Essentially the vanilla spawn parameters, gutted some parameter sets due to irrelevency
+function Recruit:createVariant()
+  local parameters = {}
+  util.mergeTable(parameters, self.spawnConfig.parameters)
+
+  local scriptConfig = self:_scriptConfig(parameters)
+  parameters.persistent = self.persistent
+
+  scriptConfig.initialStatus = copy(self.status) or {}
+  scriptConfig.initialStorage = util.mergeTable(scriptConfig.initialStorage or {}, self.storage or {})
+
+  local variant = self:_createVariant(parameters)
+  return variant
+
+end
+
+
+function Recruit:_createVariant(parameters)
+	return root.npcVariant(self.spawnConfig.species, self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
+end
 
 local oldInitCE = init
 function init()
@@ -187,57 +245,7 @@ end
 
 local oldUninitCE = uninit
 function uninit()
+	wardrobeManager:storeWardrobes()
+	dLogJson(getStorageWardrobe(), "storedWardrobes", true)
  	return oldUninitCE()
-end
-
-
-function Recruit:_createVariant(parameters)
-	local variant = root.npcVariant(self.spawnConfig.species, self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
-	return variant
-end
-
-
-function Recruit:_spawn(position, parameters)
-	local params = copy(parameters)
-	local outfit = wardrobeManager:getOutfit(self.podUuid)
-	if outfit then
-		outfit:overrideParams(params)
-	end
-	return world.spawnNpc(position, self.spawnConfig.species, self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
-end
-
---Essentially the vanilla spawn parameters, gutted for the purpose of creating a variant npc
-function Recruit:createVariant()
-  local parameters = {}
-  util.mergeTable(parameters, self.spawnConfig.parameters)
-
-  local scriptConfig = self:_scriptConfig(parameters)
-  parameters.persistent = self.persistent
-
-  scriptConfig.initialStatus = copy(self.status) or {}
-  scriptConfig.initialStorage = util.mergeTable(scriptConfig.initialStorage or {}, self.storage or {})
-
-  --[[
-  if getPetPersistentEffects then
-    parameters.level = 1
-  end
-  if self.spawner.levelOverride then
-    parameters.level = self.spawner.levelOverride
-  end
-
-  scriptConfig.initialStatus.persistentEffects = self:getPersistentEffects()
-
-  local damageTeam = self:damageTeam()
-  parameters.damageTeamType = damageTeam.type
-  parameters.damageTeam = damageTeam.team
-  parameters.relocatable = false
-
-  if self.collar and self.collar.parameters then
-    util.mergeTable(parameters, self.collar.parameters)
-  end
-  --]]
-
-  local variant = self:_createVariant(parameters)
-  return variant
-
 end

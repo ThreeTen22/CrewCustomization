@@ -19,8 +19,8 @@ end
 
 function dLogJson(input, prefix, clean)
   local str = "\n"
-  if toBool(clean) or toBool(prefix) then clean = 1 else clean = 0 end
-  if prefix ~= "true" and prefix ~= "false" and prefix then
+  if prefix == true or clean == true then clean = 1 else clean = 0 end
+  if type(prefix) == "string" then
     str = prefix..str
   end
   if type(input) ~= "table" then return dLog(input, str) end 
@@ -60,12 +60,6 @@ dComp["thread"] = function(input) return dLog(input) end
 dComp["function"] = function(input) return sb.logInfo("%s", input) end
 dComp["nil"] = function(input) return dLog("nil") end
 
-
-
-
-function getAsset(assetPath)
-  return root.assetJson(assetPath)
-end
 
 function getPathStr(t, str)
     if str == "" then return t end
@@ -168,13 +162,36 @@ end
 
 function crewutil.getPlanetTypes()
   local output = {}
-  local asset = root.assetJson("/terrestrial_worlds.config:planetTypes") 
-  for k,v in pairs(asset) do
-    output.k = true
+  local asset = root.assetJson("/interface/cockpit/cockpit.config:planetTypeToDescription") 
+  for biome,desc in pairs(asset) do
+    output[biome] = {crewutil.getFriendlyBiomeName(biome), desc}
   end
 
   return output
   -- body
+end
+
+function crewutil.getFriendlyBiomeName(planetType)
+  
+  paths = {"/biomes/surface/%s.biome:friendlyName", "/biomes/space/%s.biome:friendlyName"}
+  local success, friendlyName, path
+  local foundAsset = false
+  for _,v in ipairs(paths) do
+    success, friendlyName = getAsset(string.format(v, planetType))
+    if success then 
+      return friendlyName
+    end
+  end
+  return planetType
+end
+
+function getAsset(directory)
+  --\nANY ERROR DISPLAYED WITHIN PCALL WILL NOT EFFECT GAMEPLAY AND CAN BE SAFELY IGNORED"
+  dLog("\n=========== MAKING PCALL ===========")
+  local success, friendlyName = pcall(root.assetJson, directory)
+  --dLog(friendlyName)
+  dLog("=========== END PCALL ===========")
+  return success, friendlyName
 end
 
 function crewutil.getPlanetType()
