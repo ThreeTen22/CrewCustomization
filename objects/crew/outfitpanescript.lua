@@ -14,6 +14,10 @@ function init()
 	self.itemBag = nil
 	self.itemBagStorage = nil
 	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getWardrobes"), logContents)
+
+	for i = 0, 20 do
+		widget.addListItem("outfitScrollArea.outfitList")
+	end
 	return
 end
 
