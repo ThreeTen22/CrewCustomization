@@ -62,17 +62,21 @@ local function getStorageWardrobe()
   dLog("companions:  gettingStorageWardrobe")
   local wardrobes = {}
   local baseOutfits = {}
+  local identities = {}
 
-  if storage then
-  	for k,v in pairs(storage.wardrobes or {}) do
-  	  wardrobes[k] = v
-  	end
-	
-  	for k,v in pairs(storage.baseOutfits or {}) do
-  	  baseOutfits[k] = v
-  	end
+  for k,v in pairs(storage.wardrobes or {}) do
+    wardrobes[k] = v
   end
-  return {wardrobes = wardrobes, baseOutfits = baseOutfits}
+
+  for k,v in pairs(storage.baseOutfits or {}) do
+    baseOutfits[k] = v
+  end
+
+  recruitSpawner:forEachCrewMember(function(recruit)
+  	identities[recruit.podUuid] = copy(recruit.spawnConfig.parameters.identity)
+  end)
+
+  return {wardrobes = wardrobes, baseOutfits = baseOutfits, identities = identities}
 end
 
 function wardrobeManager:init()

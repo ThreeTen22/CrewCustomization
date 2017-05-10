@@ -12,6 +12,7 @@ function setupOutfits(args)
 	dLog("Pane: logging Contents: ")
 	storage.wardrobes = args.wardrobes
 	storage.baseOutfits = args.baseOutfits
+	storage.identities = args.identities
 	if not storage.player then
 		timer.start(0.10, getPlayerInfo)
 		status.addEphemeralEffect("nude", 1, player.id())
