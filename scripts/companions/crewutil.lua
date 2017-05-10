@@ -1,8 +1,102 @@
+require "/npcs/timers.lua"
 dComp = {}
 crewutil = {
   weapSlots = {"primary","sheathedprimary","alt","sheathedalt"},
   armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"}
 }
+
+
+timer = createTimers()
+
+outfit = {}
+outfit.__index = outfit
+
+function outfit.new(...)
+  local self = setmetatable({}, outfit)
+  self:init(...)
+  return self
+end
+
+function outfit:init(recruitUuId,storedOutfit)
+  if storedOutfit then
+    self.hasArmor = storedOutfit.hasArmor
+    self.hasWeapons = storedOutfit.hasWeapons
+    self.items = storedOutfit.items
+    self.planetTypes = storeOutfit.planetTypes
+    self.name = storeOutfit.name
+  else
+    local recruit = recruitSpawner:getRecruit(recruitUuId)
+    self:buildOutfit(recruit)
+  end
+end
+
+function outfit:buildOutfit(recruit)
+  local items = {}
+
+  --get starting weapons
+  local variant = recruit:createVariant()
+
+  for i, slot in ipairs(crewutil.weapSlots) do
+    if variant.items[slot] then
+      items[slot] = jarray()
+      table.insert(items[slot], variant.items[slot].content)
+    end
+  end
+  --get starting outfit, building it due to FU not using the items override parameter
+  local crewConfig = root.npcConfig(recruit.spawnConfig.type).scriptConfig.crew
+  local defaultUniform = crewConfig.defaultUniform
+  local colorIndex = crewConfig.role.uniformColorIndex
+  for _,slot in ipairs(crewConfig.uniformSlots) do
+    local item = defaultUniform[slot]
+    if item then
+      items[slot] = jarray()
+      table.insert(items[slot], crewutil.dyeUniformItem(item, colorIndex))
+    end
+  end 
+
+  self.hasArmor, self.hasWeapons, self.emptyHands = crewutil.outfitCheck(items)
+  self.items = crewutil.buildItemOverrideTable(items)
+  self.planetTypes = {}
+  for k,_ in pairs(wardrobeManager.planetTypes) do
+    self.planetTypes[k] = true
+  end
+
+  self.name = "default"
+end
+
+function outfit:toJson(skipTypes)
+local json = {}
+  json.items = self.items
+  json.hasArmor = self.hasArmor
+  json.hasWeapons = self.hasWeapons
+  json.emptyHands = self.emptyHands
+  json.planetTypes = self.planetTypes
+  json.name = self.name
+  return json
+end
+
+function outfit:overrideParams(parameters)
+  local items = self.items
+  parameters.items = items
+  if path(parameters.scriptConfig,"initialStorage","crewUniform") then
+    parameters.scriptConfig.initialStorage.crewUniform = {}
+  end
+  if path(parameters.scriptConfig,"initialStorage","itemSlots") then
+    parameters.scriptConfig.initialStorage.itemSlots = nil
+  end
+  if path(parameters.scriptConfig,"crew","uniform") then
+    parameters.scriptConfig.crew.uniform = {slots = {}}
+  end
+  setPath(parameters.scriptConfig, "behaviorConfig", "emptyHands", self.emptyHands)
+  
+  --if self.hasArmor then
+  --  setPath(parameters.scriptConfig,"crew","uniformSlots",crewutil.armorSlots)
+  --  --setPath(parameters.scriptConfig,"crew","role","uniformColorIndex", "")
+  --end
+  return parameters
+end
+
+
 function dLog(item, prefix)
   if not prefix then prefix = "" end
   if type(item) ~= "string" then
@@ -162,10 +256,15 @@ end
 
 function crewutil.getPlanetTypes()
   local output = {}
-  local asset = root.assetJson("/interface/cockpit/cockpit.config:planetTypeToDescription") 
-  for biome,desc in pairs(asset) do
-    --output[biome] = {crewutil.getFriendlyBiomeName(biome), desc}
-    output[biome] = {biome, desc}
+  --local asset = root.assetJson("/interface/cockpit/cockpit.config:planetTypeToDescription") 
+  local planetTypes = root.assetJson("/terrestrial_worlds.config:planetTypes")
+  for _, planetType in pairs(planetTypes) do
+    for _,biome in pairs(planetType.layers.surface.primaryRegion) do
+      if not output[biome] then 
+
+      end
+    end
+   
   end
 
   return output
@@ -208,6 +307,14 @@ function crewutil.dyeUniformItem(item, colorIndex)
   item.parameters.colorIndex = colorIndex
 
   return item
+end
+
+function crewutil.newArrayFromKey(array, key)
+  local newArray = {}
+  for _,v in ipairs(array) do
+    table.insert(newArray, v[key])
+  end
+  return newArray
 end
 
 --FUNCTIONS TO REMEMBER--

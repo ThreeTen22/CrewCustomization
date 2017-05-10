@@ -3,28 +3,36 @@ require "/scripts/interp.lua"
 require "/scripts/messageutil.lua"
 require "/scripts/companions/crewutil.lua"
 
-local function logContents(args)
+
+local function getSpeciesPath(species, subPath)          
+    return string.format("/species/%s.species%s",path,species)
+  end
+
+function setupOutfits(args)
 	dLog("Pane: logging Contents: ")
-	for k,v in pairs(args) do
-		dLogJson(v, k, true)
+	storage.wardrobes = args.wardrobes
+	storage.baseOutfits = args.baseOutfits
+	if not storage.player then
+		timer.start(0.10, getPlayerInfo)
+		status.addEphemeralEffect("nude", 1, player.id())
 	end
 end
 
+
+
 function init()
-	player.enableMission("testarena")
+	if not storage then storage = {} end
+	self.player = nil
 	self.itemBag = nil
 	self.itemBagStorage = nil
-	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getWardrobes"), logContents)
-
-	for i = 0, 20 do
-		widget.addListItem("outfitScrollArea.outfitList")
-	end
+	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), setupOutfits)
 	return
 end
 
 function update(dt)
-	updatePortrait()
+	--updatePortrait()
 	promises:update()
+	timer.tick(dt)
 	return 
 end
 
@@ -75,4 +83,26 @@ function checkForItemChanges(itemBag, contentsChanged)
     end
     self.equipBagStorage = widget.itemGridItems("itemGrid") 
     return contentsChanged
+end
+
+
+function getPlayerInfo()
+	self.species = player.species()
+	self.identity = getPlayerIdentity(self.species, player.gender())
+end
+
+function getPlayerIdentity(species, gender)
+	local self = {}
+	--local genderPath = ":genders.0"
+	--if gender == "female" then genderPath = ":genders.1" end
+	--local success, genderTable = getAsset(getSpeciesPath(player.species(), genderPath))
+	--if success then
+	--self.hairGroup = genderTable.hairGroup or "hair"
+	--self.
+	--end
+	-- body
+	
+	local portrait = world.entityPortrait(player.id(), "head")
+	portrait = crewutil.newArrayFromKey(portrait, "image")
+	dLogJson(portrait, "portrait")
 end
