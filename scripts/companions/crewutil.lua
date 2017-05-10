@@ -164,7 +164,8 @@ function crewutil.getPlanetTypes()
   local output = {}
   local asset = root.assetJson("/interface/cockpit/cockpit.config:planetTypeToDescription") 
   for biome,desc in pairs(asset) do
-    output[biome] = {crewutil.getFriendlyBiomeName(biome), desc}
+    --output[biome] = {crewutil.getFriendlyBiomeName(biome), desc}
+    output[biome] = {biome, desc}
   end
 
   return output
@@ -186,12 +187,11 @@ function crewutil.getFriendlyBiomeName(planetType)
 end
 
 function getAsset(directory)
-  --\nANY ERROR DISPLAYED WITHIN PCALL WILL NOT EFFECT GAMEPLAY AND CAN BE SAFELY IGNORED"
-  dLog("\n=========== MAKING PCALL ===========")
-  local success, friendlyName = pcall(root.assetJson, directory)
+  dLog("\n=========== MAKING PCALL ===========\nANY ERROR DISPLAYED WITHIN PCALL WILL NOT EFFECT GAMEPLAY AND CAN BE SAFELY IGNORED")
+  local success, asset = pcall(root.assetJson, directory)
   --dLog(friendlyName)
   dLog("=========== END PCALL ===========")
-  return success, friendlyName
+  return success, asset
 end
 
 function crewutil.getPlanetType()
