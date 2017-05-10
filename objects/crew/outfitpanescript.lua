@@ -11,6 +11,7 @@ local function logContents(args)
 end
 
 function init()
+	player.enableMission("testarena")
 	self.itemBag = nil
 	self.itemBagStorage = nil
 	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getWardrobes"), logContents)
@@ -25,6 +26,26 @@ function update(dt)
 	updatePortrait()
 	promises:update()
 	return 
+end
+
+function updatePortrait()
+  local num = 1
+  local portraits = config.getParameter("portraitNames")
+  local npcPort = root.npcPortrait("full", "human", "villager", 1)
+  while num <= #npcPort do
+    widget.setImage(portraits[num], npcPort[num].image)
+    widget.setVisible(portraits[num], true)
+    num = num+1
+  end
+  while num <= #portraits do
+    widget.setVisible(portraits[num], false)
+    num = num+1
+  end
+end
+
+function outfitSelected()
+
+	return
 end
 
 function checkForItemChanges(itemBag, contentsChanged)
@@ -54,19 +75,4 @@ function checkForItemChanges(itemBag, contentsChanged)
     end
     self.equipBagStorage = widget.itemGridItems("itemGrid") 
     return contentsChanged
-end
-
-function updatePortrait()
-  local num = 1
-  local portraits = config.getParameter("portraitNames")
-  local npcPort = root.npcPortrait("full", "human", "villager", 1)
-  while num <= #npcPort do
-    widget.setImage(portraits[num], npcPort[num].image)
-    widget.setVisible(portraits[num], true)
-    num = num+1
-  end
-  while num <= #portraits do
-    widget.setVisible(portraits[num], false)
-    num = num+1
-  end
 end
