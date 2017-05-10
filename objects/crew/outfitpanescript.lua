@@ -5,8 +5,8 @@ require "/scripts/companions/crewutil.lua"
 
 
 local function getSpeciesPath(species, subPath)          
-    return string.format("/species/%s.species%s",path,species)
-  end
+    return string.format("/species/%s.species%s",species,subPath)
+ end
 
 function setupOutfits(args)
 	dLog("Pane: logging Contents: ")
@@ -18,37 +18,36 @@ function setupOutfits(args)
 	end
 end
 
-
-
 function init()
 	if not storage then storage = {} end
-	self.player = nil
+	self.playerIdentity = nil
 	self.itemBag = nil
 	self.itemBagStorage = nil
+	self.dirty = false
 	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), setupOutfits)
 	return
 end
 
 function update(dt)
-	--updatePortrait()
 	promises:update()
 	timer.tick(dt)
 	return 
 end
 
 function updatePortrait()
-  local num = 1
-  local portraits = config.getParameter("portraitNames")
-  local npcPort = root.npcPortrait("full", "human", "villager", 1)
-  while num <= #npcPort do
-    widget.setImage(portraits[num], npcPort[num].image)
-    widget.setVisible(portraits[num], true)
-    num = num+1
-  end
-  while num <= #portraits do
-    widget.setVisible(portraits[num], false)
-    num = num+1
-  end
+	local identity = self.playerIdentity or {species = "human"}
+	local portraits = config.getParameter("portraitNames")
+	local npcPort = root.npcPortrait("full", identity.species, "nakedvillager", 1, math.random(1,24353458), {identity = identity})
+	local num = 1
+	while num <= #npcPort do
+		widget.setImage(portraits[num], npcPort[num].image)
+		widget.setVisible(portraits[num], true)
+		num = num+1
+	end
+	while num <= #portraits do
+		widget.setVisible(portraits[num], false)
+		num = num+1
+	end
 end
 
 function outfitSelected()
@@ -87,22 +86,77 @@ end
 
 
 function getPlayerInfo()
-	self.species = player.species()
-	self.identity = getPlayerIdentity(self.species, player.gender())
+	local portrait = world.entityPortrait(player.id(), "bust")
+	status.removeEphemeralEffect("nude")
+	self.playerIdentity = getPlayerIdentity(player.species(), player.gender(), portrait)
+	timer.start(0.01, updatePortrait)
 end
 
-function getPlayerIdentity(species, gender)
+function getPlayerIdentity(species, gender, portrait)
 	local self = {}
-	--local genderPath = ":genders.0"
-	--if gender == "female" then genderPath = ":genders.1" end
-	--local success, genderTable = getAsset(getSpeciesPath(player.species(), genderPath))
-	--if success then
-	--self.hairGroup = genderTable.hairGroup or "hair"
-	--self.
-	--end
-	-- body
+	self.gender = gender
+	self.species = species
+	--BEING DEBUG--
+	--portrait = root.npcPortrait("bust", "avian", "nakedvillager", 1, math.random(1, 5348854093), {identity = {gender = self.gender}})
+	--self.species = "avian"
+	--END DEBUG--
+	local _, genderInfo = getAsset(getSpeciesPath(self.species, ":genders"))
+
+	util.mapWithKeys(portrait, function(k,v)
+	    local value = v.image:lower()
+
+	    if value:find("malehead.png", 10, true) then
+			self.personalityHeadOffset = v.position
+		elseif value:find("arm.png",10, true) then
+			self.personalityArmOffset = v.position
+		end
+
+	    value = value:match("/humanoid/.-/(.-)%?addmask=.*")
+	    local directory, idle, directive = value:match("(.+)%.png:(.-)(%?.+)")
+
+		return {directory = directory, idle = idle, directive = directive}
+	end, portrait)
+
 	
-	local portrait = world.entityPortrait(player.id(), "head")
-	portrait = crewutil.newArrayFromKey(portrait, "image")
-	dLogJson(portrait, "portrait")
+
+	for k,v in ipairs(portrait) do
+		local found = false
+		local directory = v.directory
+		local directive = v.directive
+		if directory:find("/") then
+			local partGroup, partType = directory:match("(.-)/(.+)")
+			if partGroup == "hair" then
+				self.hairGroup = partGroup
+				self.hairType = partType
+				self.hairDirectives = v.directive
+				found = true 
+			end
+			for _,v in ipairs(genderInfo) do
+				if found then break end
+				for k,v in pairs(v) do
+					if v == partGroup then
+						local key = k 
+						self[k] = partGroup
+						self[k:gsub("Group","Type")] = partType
+						self[k:gsub("Group","Directives")] = directive
+						found = true 
+						break
+					end
+				end
+			end
+		end
+	end
+
+	self.personalityArmIdle = portrait[1].idle
+	for k,v in ipairs(portrait) do
+		local directory = v.directory
+		if directory:find("malebody") then
+			self.personalityIdle = v.idle
+			self.bodyDirectives = v.directive
+		elseif directory:find("emote") then
+			self.emoteDirectives = v.directive
+		end
+	end
+	return self
+
 end

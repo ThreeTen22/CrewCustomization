@@ -160,6 +160,6 @@ end
 local oldUninitCE = uninit
 function uninit()
 	wardrobeManager:storeWardrobes()
-	dLogJson(getStorageWardrobe(), "storedWardrobes", true)
+	--dLogJson(getStorageWardrobe(), "storedWardrobes", true)
  	return oldUninitCE()
 end

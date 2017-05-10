@@ -309,14 +309,6 @@ function crewutil.dyeUniformItem(item, colorIndex)
   return item
 end
 
-function crewutil.newArrayFromKey(array, key)
-  local newArray = {}
-  for _,v in ipairs(array) do
-    table.insert(newArray, v[key])
-  end
-  return newArray
-end
-
 --FUNCTIONS TO REMEMBER--
 --[[
 ============NPC COMBAT BEHAVIOR===========
