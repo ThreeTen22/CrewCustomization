@@ -73,7 +73,7 @@ local function getStorageWardrobe()
   end
 
   recruitSpawner:forEachCrewMember(function(recruit)
-  	identities[recruit.podUuid] = copy(recruit.spawnConfig.parameters.identity)
+  	identities[recruit.podUuid] = recruit.spawnConfig.parameters.identity
   end)
 
   return {wardrobes = wardrobes, baseOutfits = baseOutfits, identities = identities}
