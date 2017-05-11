@@ -6,6 +6,95 @@ wardrobeManager = {}
 wardrobe = {}
 wardrobe.__index = wardrobe
 
+
+outfit = {}
+outfit.__index = outfit
+
+function outfit.new(...)
+  local self = setmetatable({}, outfit)
+  self:init(...)
+  return self
+end
+
+function outfit:init(recruitUuId,storedOutfit)
+  if storedOutfit then
+    self.hasArmor = storedOutfit.hasArmor
+    self.hasWeapons = storedOutfit.hasWeapons
+    self.items = storedOutfit.items
+    self.planetTypes = storeOutfit.planetTypes
+    self.name = storeOutfit.name
+  else
+    local recruit = recruitSpawner:getRecruit(recruitUuId)
+    self:buildOutfit(recruit)
+  end
+end
+
+function outfit:buildOutfit(recruit)
+  local items = {}
+
+  --get starting weapons
+  local variant = recruit:createVariant()
+
+  for i, slot in ipairs(crewutil.weapSlots) do
+    if variant.items[slot] then
+      items[slot] = jarray()
+      table.insert(items[slot], variant.items[slot].content)
+    end
+  end
+  --get starting outfit, building it due to FU not using the items override parameter
+  local crewConfig = root.npcConfig(recruit.spawnConfig.type).scriptConfig.crew
+  local defaultUniform = crewConfig.defaultUniform
+  local colorIndex = crewConfig.role.uniformColorIndex
+  for _,slot in ipairs(crewConfig.uniformSlots) do
+    local item = defaultUniform[slot]
+    if item then
+      items[slot] = jarray()
+      table.insert(items[slot], crewutil.dyeUniformItem(item, colorIndex))
+    end
+  end 
+
+  self.hasArmor, self.hasWeapons, self.emptyHands = crewutil.outfitCheck(items)
+  self.items = crewutil.buildItemOverrideTable(items)
+  self.planetTypes = {}
+  for k,_ in pairs(wardrobeManager.planetTypes) do
+    self.planetTypes[k] = true
+  end
+
+  self.name = "default"
+end
+
+function outfit:toJson(skipTypes)
+local json = {}
+  json.items = self.items
+  json.hasArmor = self.hasArmor
+  json.hasWeapons = self.hasWeapons
+  json.emptyHands = self.emptyHands
+  json.planetTypes = self.planetTypes
+  json.name = self.name
+  return json
+end
+
+function outfit:overrideParams(parameters)
+  local items = self.items
+  parameters.items = items
+  if path(parameters.scriptConfig,"initialStorage","crewUniform") then
+    parameters.scriptConfig.initialStorage.crewUniform = {}
+  end
+  if path(parameters.scriptConfig,"initialStorage","itemSlots") then
+    parameters.scriptConfig.initialStorage.itemSlots = nil
+  end
+  if path(parameters.scriptConfig,"crew","uniform") then
+    parameters.scriptConfig.crew.uniform = {slots = {}}
+  end
+  setPath(parameters.scriptConfig, "behaviorConfig", "emptyHands", self.emptyHands)
+  
+  --if self.hasArmor then
+  --  setPath(parameters.scriptConfig,"crew","uniformSlots",crewutil.armorSlots)
+  --  --setPath(parameters.scriptConfig,"crew","role","uniformColorIndex", "")
+  --end
+  return parameters
+end
+
 function wardrobe.new(...)
   local self = setmetatable({}, wardrobe)
   self:init(...)
@@ -60,23 +149,23 @@ end
 
 local function getStorageWardrobe()
   dLog("companions:  gettingStorageWardrobe")
-  local wardrobes = {}
   local baseOutfits = {}
-  local identities = {}
-
-  for k,v in pairs(storage.wardrobes or {}) do
-    wardrobes[k] = v
-  end
+  local crew = {}
+  local playerInfo = storage.playerInfo or {}
 
   for k,v in pairs(storage.baseOutfits or {}) do
     baseOutfits[k] = v
   end
 
   recruitSpawner:forEachCrewMember(function(recruit)
-  	identities[recruit.podUuid] = recruit.spawnConfig.parameters.identity
+    local crewmember = {}
+    		crewmember.identity = recruit.spawnConfig.parameters.identity
+    		crewmember.npcType = recruit.spawnConfig.type
+    		crewmember.podUuid = recruit.podUuid
+  	crew[recruit.podUuid] = crewmember
   end)
 
-  return {wardrobes = wardrobes, baseOutfits = baseOutfits, identities = identities}
+  return {baseOutfits = baseOutfits, crew = crew, playerInfo = playerInfo}
 end
 
 function wardrobeManager:init()

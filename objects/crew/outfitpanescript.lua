@@ -3,6 +3,105 @@ require "/scripts/interp.lua"
 require "/scripts/messageutil.lua"
 require "/scripts/companions/crewutil.lua"
 
+--[[NOTES:
+	timer can be manipulated to use coroutines.  give coroutine as function,  pass coroutine in as variable
+--]]
+outfitManager, baseOutfit, crewmember, refreshManager = {}, {}, {}, {}
+outfitManager.__index = outfitManager
+baseOutfit.__index = baseOutfit
+crewmember.__index = crewmember
+refreshManager.__index = refreshManager
+
+function refreshManager:init()
+	self.updateTable = {}
+end
+
+function refreshManager:notQueued(key)
+	return not self.updateTable[key]
+end
+
+function refreshManager:queue(key, func)
+	if self:notQueued(key) then
+		self.updateTable[key] = func
+	end
+end
+
+function refreshManager:update()
+	local updateTable = self.updateTable
+	self.updateTable = {}
+	for _,func in pairs(updateTable) do
+		func()
+	end
+	-- body
+end
+
+function crewmember.new(...)
+	local self = setmetatable({},crewmember)
+	self:init(...)
+	return self
+end
+
+function crewmember:init(stored)
+	self.Uuid = stored.podUuId
+	self.npcType = stored.npcType
+	self.identity = stored.identity
+	self.portrait = stored.portrait
+end
+
+function crewmember:getPortrait(portraitType)
+	return root.npcPortrait(portraitType, self.identity.species, self.npcType, )
+end
+
+function baseOutfit.new(...)
+	local self = setmetatable({},baseOutfits)
+	self:init(...)
+	return self
+end
+
+function baseOutfit:init(...)
+	self.formattedOutfit = {}
+	self.Uuid = ""
+	self.displayName = "init"
+end
+
+function outfitManager:init(...)
+	self.crew = {}
+	self.baseOutfit = {}
+end
+
+function outfitManager:load(key, class)
+	for k,v in pairs(storage[key]) do
+		self[key][k] = class.new(v)
+	end
+end
+
+function outfitManager:addUnique(key, uniqueId, class, storedValue)
+	self[key][uniqueId] = class.new(storedValue)
+end
+
+function outfitManager:loadPlayer(step)
+	local initTable = {}
+	local playerUuid = player.uniqueId() 
+	if storage.playerInfo then
+		initTable = storage.playerInfo
+	else
+		if step == 1 do
+			status.addEphemeralEffect("nude", 5.0)
+			timer.add(0.1, function() return outfitManager:loadPlayer(2) end)
+		elseif step == 2 do
+			local portrait = world.entityPortrait(player.id(), "bust")
+			initTable.portrait = world.entityPortrait(player.id(), "head")
+
+			status.removeEphemeralEffect("nude") 
+
+			initTable.identity = getPlayerIdentity(portrait)
+			initTable.npcType = "nakedvillager"
+			initTable.UuId = playerUuid
+		end
+	end
+	self:addUnique("crew", playerUuid, crewmember, initTable)
+	-- body
+end
 
 local function getSpeciesPath(species, subPath)          
     return string.format("/species/%s.species%s",species,subPath)
@@ -10,27 +109,26 @@ local function getSpeciesPath(species, subPath)
 
 function setupOutfits(args)
 	dLog("Pane: logging Contents: ")
-	storage.wardrobes = args.wardrobes
-	storage.baseOutfits = args.baseOutfits
-	storage.identities = args.identities
-	if not storage.player then
-		timer.start(0.10, getPlayerInfo)
-		status.addEphemeralEffect("nude", 1, player.id())
-	end
-	dLogJson(storage.identities, "identities", true)
+	storage.baseOutfits = args.baseOutfits or {}
+	storage.crew = args.crew or {}
+
+	outfitManager:load("crew", crewmember)
+	outfitManager:load("baseOutfit", baseOutfit)
+	return outfitManager:loadPlayer(1)
 end
 
 function init()
 	if not storage then storage = {} end
-	self.playerIdentity = nil
 	self.itemBag = nil
 	self.itemBagStorage = nil
-	self.dirty = false
+	self.queuedPortraitUpdate 
+	outfitManager:init()
 	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), setupOutfits)
 	return
 end
 
 function update(dt)
+	refreshManager:update()
 	promises:update()
 	timer.tick(dt)
 	return 
@@ -57,23 +155,23 @@ function outfitSelected()
 	return
 end
 
+function queueRefresh( ... )
+	-- body
+end
+
 
 
 function getPlayerInfo()
-	local portrait = world.entityPortrait(player.id(), "bust")
-	status.removeEphemeralEffect("nude")
-	self.playerIdentity = getPlayerIdentity(player.species(), player.gender(), portrait)
-	timer.start(0.01, updatePortrait)
+	
 end
 
-function getPlayerIdentity(species, gender, portrait)
+function getPlayerIdentity(portrait)
 	local self = {}
-	self.gender = gender
-	self.species = species
-	--BEING DEBUG--
-	--portrait = root.npcPortrait("bust", "avian", "nakedvillager", 1, math.random(1, 5348854093), {identity = {gender = self.gender}})
-	--self.species = "avian"
-	--END DEBUG--
+	self.species = player.species()
+	self.gender = player.gender()
+	self.name = world.entityName(player.id())
+	
+	
 	local _, genderInfo = getAsset(getSpeciesPath(self.species, ":genders"))
 
 	util.mapWithKeys(portrait, function(k,v)
@@ -102,7 +200,7 @@ function getPlayerIdentity(species, gender, portrait)
 			if partGroup == "hair" then
 				self.hairGroup = partGroup
 				self.hairType = partType
-				self.hairDirectives = v.directive
+				self.hairDirectives = directive
 				found = true 
 			end
 			for _,v in ipairs(genderInfo) do
