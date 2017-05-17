@@ -119,7 +119,8 @@ function baseOutfit.new(...)
 end
 
 function baseOutfit:init(stored)
-	self.items = stored.tiems or {}
+	stored = stored or {}
+	self.items = stored.items or {}
 	self.Uuid = stored.Uuid or ""
 	self.displayName = stored.displayName or "init"
 end
@@ -220,7 +221,6 @@ function listOutfits(filter)
 		if uuid and outfit then
 			newItem = widget.addListItem("outfitScrollArea.outfitList")
 			widget.setData(dataPath:format(newItem), outfitUuid)
-
 		end
 	end
 end
@@ -322,3 +322,8 @@ function checkForItemChanges(itemBag, contentsChanged)
     return contentsChanged
 end
 
+
+function updateOutfitName()
+	outfitManager:addUnique("baseOutfit", tostring(math.random(1,1000)), baseOutfit, {displayName = tostring(math.random(1,1000))})
+	return listOutfits()
+end

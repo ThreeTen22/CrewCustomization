@@ -223,13 +223,13 @@ function crewutil.dyeUniformItem(item, colorIndex)
   return item
 end
 
-function crewutil.sortedTablesByValue(table, valueKey)
+function crewutil.sortedTablesByValue(t, valueKey)
   local sortedTable = {}
   local keyTable = {}
-  for k, v in pairs(table) do
-    dLog("sortedTable: v", v)
-    table.insert(sortedTable, v[valueKey])
-    keyTable[v[valueKey]] = k
+  for k, v in pairs(t) do
+    local value = v[valueKey]
+    table.insert(sortedTable, value)
+    keyTable[value] = k
   end
   if isEmpty(sortedTable) then return nil, nil end
   sortedTable = table.sort(sortedTable)
