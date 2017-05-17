@@ -12,6 +12,49 @@ baseOutfit.__index = baseOutfit
 crewmember.__index = crewmember
 refreshManager.__index = refreshManager
 
+--[[
+
+==  LOCAL FUNCTIONS ==
+(Will not display in _ENV)
+
+--]]
+local function getSpeciesPath(species, subPath)          
+    return string.format("/species/%s.species%s",species,subPath)
+end
+
+local function loadPlayerPartTwo()
+	refreshManager:queue("listOutfits", listOutfits)
+	refreshManager:queue("refreshPortrait", updatePortrait)
+	return outfitManager:loadPlayer(2)
+end
+
+
+function init()
+	if not storage then storage = {} end
+	self.itemBag = nil
+	self.itemBagStorage = nil
+	self.outfitFilter = nil
+	outfitManager:init()
+	refreshManager:init()
+	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), setupOutfits)
+	return
+end
+
+
+function update(dt)
+	promises:update()
+	timer.tick(dt)
+	refreshManager:update()
+	return 
+end
+
+
+
+--[[
+
+==  refreshManager ==
+
+--]]
 function refreshManager:init()
 	self.updateTable = {}
 end
@@ -30,10 +73,21 @@ function refreshManager:update()
 	local updateTable = self.updateTable
 	self.updateTable = {}
 	for _,func in pairs(updateTable) do
-		func()
+		if type(func) == "function" then
+			func()
+		elseif type(func) == "table" then
+			local args = func.args
+			func.func(args)
+		end
 	end
 	-- body
 end
+
+--[[
+
+==  crewmember ==
+
+--]]
 
 function crewmember.new(...)
 	local self = setmetatable({},crewmember)
@@ -49,24 +103,37 @@ function crewmember:init(stored)
 end
 
 function crewmember:getPortrait(portraitType)
-	return root.npcPortrait(portraitType, self.identity.species, self.npcType, )
+	return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, {identity = self.identity})
 end
 
+--[[
+
+==  baseOutfit ==
+
+--]]
+
 function baseOutfit.new(...)
-	local self = setmetatable({},baseOutfits)
+	local self = setmetatable({},baseOutfit)
 	self:init(...)
 	return self
 end
 
-function baseOutfit:init(...)
-	self.formattedOutfit = {}
-	self.Uuid = ""
-	self.displayName = "init"
+function baseOutfit:init(stored)
+	self.items = stored.tiems or {}
+	self.Uuid = stored.Uuid or ""
+	self.displayName = stored.displayName or "init"
 end
+
+--[[
+
+==  outfitManager ==
+
+--]]
 
 function outfitManager:init(...)
 	self.crew = {}
 	self.baseOutfit = {}
+	self.selectedOutfit = ""
 end
 
 function outfitManager:load(key, class)
@@ -80,64 +147,43 @@ function outfitManager:addUnique(key, uniqueId, class, storedValue)
 end
 
 function outfitManager:loadPlayer(step)
-	local initTable = {}
-	local playerUuid = player.uniqueId() 
-	if storage.playerInfo then
-		initTable = storage.playerInfo
-	else
-		if step == 1 do
-			status.addEphemeralEffect("nude", 5.0)
-			timer.add(0.1, function() return outfitManager:loadPlayer(2) end)
-		elseif step == 2 do
-			local portrait = world.entityPortrait(player.id(), "bust")
-			initTable.portrait = world.entityPortrait(player.id(), "head")
+	if step == 1 then
+		status.addEphemeralEffect("nude", 5.0)
+		timer.start(0.1, loadPlayerPartTwo)
+	elseif step == 2 then
+		local initTable = {}
+		local playerUuid = player.uniqueId() 
+		local portrait = world.entityPortrait(player.id(), "bust")
+		initTable.portrait = world.entityPortrait(player.id(), "head")
 
-			status.removeEphemeralEffect("nude") 
+		status.removeEphemeralEffect("nude") 
 
-			initTable.identity = getPlayerIdentity(portrait)
-			initTable.npcType = "nakedvillager"
-			initTable.UuId = playerUuid
-		end
+		initTable.identity = getPlayerIdentity(portrait)
+		initTable.npcType = "nakedvillager"
+		initTable.UuId = playerUuid
+		self.playerIdentity = copy(initTable)
+		return self:addUnique("crew", playerUuid, crewmember, initTable)
 	end
-	self:addUnique("crew", playerUuid, crewmember, initTable)
-	-- body
-end
 
-local function getSpeciesPath(species, subPath)          
-    return string.format("/species/%s.species%s",species,subPath)
- end
+end
 
 function setupOutfits(args)
 	dLog("Pane: logging Contents: ")
-	storage.baseOutfits = args.baseOutfits or {}
+	storage.baseOutfit = args.baseOutfit or {}
 	storage.crew = args.crew or {}
 
 	outfitManager:load("crew", crewmember)
 	outfitManager:load("baseOutfit", baseOutfit)
+	if not outfitManager.baseOutfit then outfitManager.baseOutfit = {} end
+	if not outfitManager.crew then outfitManager.crew = {} end
+
 	return outfitManager:loadPlayer(1)
 end
 
-function init()
-	if not storage then storage = {} end
-	self.itemBag = nil
-	self.itemBagStorage = nil
-	self.queuedPortraitUpdate 
-	outfitManager:init()
-	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), setupOutfits)
-	return
-end
-
-function update(dt)
-	refreshManager:update()
-	promises:update()
-	timer.tick(dt)
-	return 
-end
-
 function updatePortrait()
-	local identity = self.playerIdentity or {species = "human"}
+	local identity = outfitManager.playerIdentity or {species = "human"}
 	local portraits = config.getParameter("portraitNames")
-	local npcPort = root.npcPortrait("full", identity.species, "nakedvillager", 1, math.random(1,24353458), {identity = identity})
+	local npcPort = root.npcPortrait("full", identity.identity.species, "nakedvillager", 1, math.random(1,24353458), identity)
 	local num = 1
 	while num <= #npcPort do
 		widget.setImage(portraits[num], npcPort[num].image)
@@ -159,10 +205,24 @@ function queueRefresh( ... )
 	-- body
 end
 
-
-
-function getPlayerInfo()
+function listOutfits(filter)
+	local index = 2
+	local dataPath = "outfitScrollArea.outfitList.%s"
+	local subWidgetPath = "outfitScrollArea.outfitList.%s.%s"
 	
+	local newItem = widget.addListItem("outfitScrollArea.outfitList")
+	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
+	local sortedTable, keyTable = crewutil.sortedTablesByValue(outfitManager.baseOutfit, "displayName")
+	if not (sortedTable and keyTable) then return end
+	for i, outfitName in ipairs(sortedTable) do
+		local outfitUuid = keyTable[outfitName]
+		local outfit = outfitManager[key]
+		if uuid and outfit then
+			newItem = widget.addListItem("outfitScrollArea.outfitList")
+			widget.setData(dataPath:format(newItem), outfitUuid)
+
+		end
+	end
 end
 
 function getPlayerIdentity(portrait)
@@ -172,7 +232,7 @@ function getPlayerIdentity(portrait)
 	self.name = world.entityName(player.id())
 	
 	
-	local _, genderInfo = getAsset(getSpeciesPath(self.species, ":genders"))
+	local genderInfo = getAsset(getSpeciesPath(self.species, ":genders"))
 
 	util.mapWithKeys(portrait, function(k,v)
 	    local value = v.image:lower()

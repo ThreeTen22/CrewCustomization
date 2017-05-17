@@ -174,7 +174,7 @@ function crewutil.getPlanetTypes()
   for _, planetType in pairs(planetTypes) do
     for _,biome in pairs(planetType.layers.surface.primaryRegion) do
       if not output[biome] then 
-
+        output[biome] = biome
       end
     end
    
@@ -185,25 +185,26 @@ function crewutil.getPlanetTypes()
 end
 
 function crewutil.getFriendlyBiomeName(planetType)
-  
   paths = {"/biomes/surface/%s.biome:friendlyName", "/biomes/space/%s.biome:friendlyName"}
-  local success, friendlyName, path
+  local friendlyName, path
   local foundAsset = false
   for _,v in ipairs(paths) do
-    success, friendlyName = getAsset(string.format(v, planetType))
-    if success then 
+    friendlyName = getAsset(string.format(v, planetType))
+    if friendlyName then 
       return friendlyName
     end
   end
   return planetType
 end
 
-function getAsset(directory)
-  dLog("\n=========== MAKING PCALL ===========\nANY ERROR DISPLAYED WITHIN PCALL WILL NOT EFFECT GAMEPLAY AND CAN BE SAFELY IGNORED")
+function getAsset(directory, default)
+  dLog("\n=========== MAKING PCALL ===========\nANY ERROR DISPLAYED WITHIN CAN BE SAFELY IGNORED")
   local success, asset = pcall(root.assetJson, directory)
-  --dLog(friendlyName)
   dLog("=========== END PCALL ===========")
-  return success, asset
+  if success then 
+    return asset 
+  end
+  return default
 end
 
 function crewutil.getPlanetType()
@@ -220,6 +221,20 @@ function crewutil.dyeUniformItem(item, colorIndex)
   item.parameters.colorIndex = colorIndex
 
   return item
+end
+
+function crewutil.sortedTablesByValue(table, valueKey)
+  local sortedTable = {}
+  local keyTable = {}
+  for k, v in pairs(table) do
+    dLog("sortedTable: v", v)
+    table.insert(sortedTable, v[valueKey])
+    keyTable[v[valueKey]] = k
+  end
+  if isEmpty(sortedTable) then return nil, nil end
+  sortedTable = table.sort(sortedTable)
+
+  return sortedTable, keyTable
 end
 
 --FUNCTIONS TO REMEMBER--
