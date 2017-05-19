@@ -144,7 +144,7 @@ function crewutil.buildEquipTable(equipArmor, equipWeap)
             back = equipArmor,
             backCosmetic = equipArmor}
 end
-
+--IDENTICAL TO THE FUNCTION IN UTIL.lua, OVERWRITTEN HERE TO REMOVE LOGINFO SPAM
 function setPath(t, ...)
   local args = {...}
   --sb.logInfo("args are %s", args)
@@ -200,7 +200,7 @@ end
 function getAsset(directory, default)
   dLog("\n=========== MAKING PCALL ===========\nANY ERROR DISPLAYED WITHIN CAN BE SAFELY IGNORED")
   local success, asset = pcall(root.assetJson, directory)
-  dLog("=========== END PCALL ===========")
+  dLog("\n=========== END PCALL ===========")
   if success then 
     return asset 
   end
@@ -227,13 +227,14 @@ function crewutil.sortedTablesByValue(t, valueKey)
   local sortedTable = {}
   local keyTable = {}
   for k, v in pairs(t) do
-    local value = v[valueKey]
+    local value =  v[valueKey]
     table.insert(sortedTable, value)
     keyTable[value] = k
   end
   if isEmpty(sortedTable) then return nil, nil end
-  sortedTable = table.sort(sortedTable)
-
+  table.sort(sortedTable)
+  dLogJson(sortedTable, "sortedTable\n")
+  dLogJson(keyTable, "keyTable  ", true)
   return sortedTable, keyTable
 end
 

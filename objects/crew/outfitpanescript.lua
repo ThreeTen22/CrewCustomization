@@ -25,7 +25,15 @@ end
 local function loadPlayerPartTwo()
 	refreshManager:queue("listOutfits", listOutfits)
 	refreshManager:queue("refreshPortrait", updatePortrait)
-	return outfitManager:loadPlayer(2)
+	outfitManager:loadPlayer(2) 
+end
+
+local function getSelectedListData(listPath)
+	local itemId = widget.getListSelected(listPath)
+	if itemId then
+		local fullpath = string.format("%s.%s", listPath, itemId)
+		return widget.getData(fullpath)
+	end
 end
 
 
@@ -96,7 +104,7 @@ function crewmember.new(...)
 end
 
 function crewmember:init(stored)
-	self.Uuid = stored.podUuId
+	self.Uuid = stored.UuId
 	self.npcType = stored.npcType
 	self.identity = stored.identity
 	self.portrait = stored.portrait
@@ -121,8 +129,16 @@ end
 function baseOutfit:init(stored)
 	stored = stored or {}
 	self.items = stored.items or {}
-	self.Uuid = stored.Uuid or ""
-	self.displayName = stored.displayName or "init"
+	self.Uuid = stored.Uuid or sb.makeUuid()
+	self.displayName = stored.displayName or "-- CHANGE ME --"
+end
+
+function baseOutfit:toJson()
+	local json = {}
+	json.items = self.items
+	json.Uuid = self.Uuid
+	json.displayName = self.displayName
+	return json
 end
 
 --[[
@@ -143,8 +159,11 @@ function outfitManager:load(key, class)
 	end
 end
 
-function outfitManager:addUnique(key, uniqueId, class, storedValue)
-	self[key][uniqueId] = class.new(storedValue)
+function outfitManager:addUnique(key, class, storedValue)
+	local newClass = class.new(storedValue)
+	local uniqueId = newClass.Uuid
+	self[key][uniqueId] = newClass
+	return self[key][uniqueId]
 end
 
 function outfitManager:loadPlayer(step)
@@ -163,10 +182,21 @@ function outfitManager:loadPlayer(step)
 		initTable.npcType = "nakedvillager"
 		initTable.UuId = playerUuid
 		self.playerIdentity = copy(initTable)
-		return self:addUnique("crew", playerUuid, crewmember, initTable)
+		return self:addUnique("crew", crewmember, initTable)
 	end
 
 end
+
+function outfitManager:setDisplayName(uniqueId, displayName)
+	if self.baseOutfit[uniqueId] then
+		self.baseOutfit[uniqueId].displayName = displayName
+	end
+end
+
+function outfitManager:getBaseOutfit(uniqueId)
+	return self.baseOutfit[uniqueId]
+end
+
 
 function setupOutfits(args)
 	dLog("Pane: logging Contents: ")
@@ -197,29 +227,50 @@ function updatePortrait()
 	end
 end
 
-function outfitSelected()
+function outfitSelected(name, data)
+	local id = "outfitScrollArea.outfitList"
+	local data = getSelectedListData(id)
+	dCompare("outfitSelected", id, data)
+
+	local outfit = outfitManager:getBaseOutfit(data)
+	if not outfit then
+		outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
+		local newItem = widget.addListItem("outfitScrollArea.outfitList")
+		local dataPath = "outfitScrollArea.outfitList.%s"
+		local subWidgetPath = "outfitScrollArea.outfitList.%s.%s"
+		widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
+		widget.setData(dataPath:format(newItem), outfit.Uuid)
+		dLogJson(outfit:toJson(),"NEW OUTFIT MADE:  ", true)
+		return widget.setListSelected("outfitScrollArea.outfitList", newItem)
+	end
+	dLogJson(outfit:toJson(), "OUTFIT CHOSEN", true)
+	widget.setText("tbOutfitName", outfit.displayName)
+	widget.setData("btnAcceptOutfitName", outfit.Uuid)
 
 	return
-end
-
-function queueRefresh( ... )
-	-- body
 end
 
 function listOutfits(filter)
 	local index = 2
 	local dataPath = "outfitScrollArea.outfitList.%s"
 	local subWidgetPath = "outfitScrollArea.outfitList.%s.%s"
-	
+
+	widget.clearListItems("outfitScrollArea.outfitList")
+
 	local newItem = widget.addListItem("outfitScrollArea.outfitList")
 	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
+	widget.setData(dataPath:format(newItem), "-- NEW --")
 	local sortedTable, keyTable = crewutil.sortedTablesByValue(outfitManager.baseOutfit, "displayName")
-	if not (sortedTable and keyTable) then return end
+	if not (sortedTable and keyTable) then
+	 	dCompare("nil sortedTable or keyTable", sortedTable, keyTable)
+	 	return 
+	end
 	for i, outfitName in ipairs(sortedTable) do
 		local outfitUuid = keyTable[outfitName]
-		local outfit = outfitManager[key]
-		if uuid and outfit then
+		local outfit = outfitManager:getBaseOutfit(outfitUuid)
+		if outfitUuid and outfit then
 			newItem = widget.addListItem("outfitScrollArea.outfitList")
+			widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
 			widget.setData(dataPath:format(newItem), outfitUuid)
 		end
 	end
@@ -290,7 +341,6 @@ function getPlayerIdentity(portrait)
 		end
 	end
 	return self
-
 end
 
 function checkForItemChanges(itemBag, contentsChanged)
@@ -323,7 +373,11 @@ function checkForItemChanges(itemBag, contentsChanged)
 end
 
 
-function updateOutfitName()
-	outfitManager:addUnique("baseOutfit", tostring(math.random(1,1000)), baseOutfit, {displayName = tostring(math.random(1,1000))})
-	return listOutfits()
+function updateOutfitName(id, data)
+	dCompare("updateOutfitName", id, data)
+	local outfitUuid = data or widget.getData(id)
+	local listItem = widget.getListSelected("outfitScrollArea.outfitList")
+	local text = widget.getText("tbOutfitName") or "nil"
+	outfitManager:setDisplayName(outfitUuid, text)
+	widget.setText(string.format("outfitScrollArea.outfitList.%s.%s", listItem, "title"), text)
 end
