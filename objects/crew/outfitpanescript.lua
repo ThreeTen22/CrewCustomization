@@ -60,7 +60,6 @@ function updateInit(args)
 	outfitManager:load("baseOutfit", baseOutfit)
 
 	listOutfits()
-	
 	updatePortrait()
 
 	update = updateMain
@@ -71,7 +70,7 @@ function updateMain()
 	if checkForItemChanges(itemBag) then
 		local outfit = outfitManager:getSelectedOutfit()
 		if outfit then
-			outfit.items = crewutil.formatItemBag(self.equipSlot, itemBag)
+			outfit.items = itemBag
 			refreshManager:queue("updatePortrait", updatePortrait)
 		end
 		
@@ -89,7 +88,10 @@ end
 --]]
 
 function visibilityManager:init()
-	self = config.getParameter("refreshManager")
+	local config = config.getParameter("refreshManager")
+	for k,v in pairs(config) do
+		self[k] = v
+	end
 end
 
 function visibilityManager:setVisible(key, bool)
@@ -278,7 +280,8 @@ function updatePortrait(crewId)
 	parameters.identity = npc.identity
 
 	if selectedOutfit.items then
-		parameters.items = crewutil.buildItemOverrideTable(selectedOutfit.items)
+
+		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(self.itemSlot, selectedOutfit.items))
 	end
 	dLogJson(parameters, "updatePortrait: parameters", true)
 	local npcPort = root.npcPortrait("full", npc.identity.species, "nakedvillager", 1, 1, parameters)
@@ -300,6 +303,7 @@ function outfitSelected()
 
 	dCompare("outfitSelected", listPath, data)
 	
+	world.containerTakeAll(pane.containerEntityId())
 	local outfit = outfitManager:getBaseOutfit(data)
 	if not outfit then
 		local newItem = nil
@@ -321,7 +325,14 @@ function outfitSelected()
 	widget.setText("tbOutfitName", outfit.displayName)
 	widget.setData("btnAcceptOutfitName", outfit.Uuid)
 
-	return
+	for i = 1, self.slotCount do
+		local item = outfit.items[i]
+		if item then
+			world.containerItemApply(pane.containerEntityId(), item, i-1)
+		end
+	end
+
+	return visibilityManager:setVisible("outfitRect", true)
 end
 
 function listOutfits(filter)
@@ -425,8 +436,8 @@ function checkForItemChanges(itemBag)
     for i = 1, self.slotCount do
       if not compare(self.itemBagStorage[i], itemBag[i]) then
         if itemBag[i] ~= nil and (not inCorrectSlot(i, itemBag[i])) then
-        	world.containerTakeAt(pane.containerEntityId(), i-1)
-        	player.giveItem(itemBag[i])
+        	--world.containerTakeAt(pane.containerEntityId(), i-1)
+        	--player.giveItem(itemBag[i])
         end
         contentsChanged = true
         break
@@ -438,7 +449,7 @@ end
 function inCorrectSlot(index, itemDescription)
   local success, itemType = pcall(root.itemType, itemDescription.name)
   if success then 
-    if itemType == self.equipSlotType[index] then
+    if itemType == self.itemSlotType[index] then
       return true
     end
   end

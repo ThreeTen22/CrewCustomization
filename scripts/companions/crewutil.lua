@@ -35,6 +35,22 @@ function dLogJson(input, prefix, clean)
   sb.logInfo("%s", str..info)
 end
 
+function dLogClass(input, prefix, clean)
+  local str = "self.%s - %s"
+  local output = {}
+  for k,v in pairs(input) do
+    if type(k) == "string" then
+      if type(v) == "table" then
+        v = sb.printJson(v, 0)
+      end
+      table.insert(output, str:format(k, v))
+    end
+  end
+
+  return dLogJson(output,prefix, clean)
+  -- body
+end
+
 
 
 function dCompare(prefix, one, two)
