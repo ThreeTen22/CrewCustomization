@@ -101,6 +101,22 @@ function logENV()
     end
   end
 end
+
+function crewutil.formatItemBag(itemSlot, itemBag)
+  dLog("===formatItemBag===")
+  local output = {}
+  for i,v in pairs(itemBag) do
+      dLog(itemSlot[i])
+    if v then
+      local key = itemSlot[i] 
+      output[key] = {}
+      table.insert(output[key], v)
+    end
+  end
+  dLogJson(output)
+  return output
+end
+
 --outfitCheck
 ----checks for weapons and armor
 ----Also sets the emptyHands behaviorConfig
@@ -236,6 +252,21 @@ function crewutil.sortedTablesByValue(t, valueKey)
   dLogJson(sortedTable, "sortedTable\n")
   dLogJson(keyTable, "keyTable  ", true)
   return sortedTable, keyTable
+end
+
+function crewutil.subTableElementEqualsValue(t, subTableKey, value, returnKey)
+  for k,v in pairs(t) do
+    if type(v) == "table" and v[subTableKey] then
+      if v[subTableKey] == value then
+        if returnKey then
+          return true, v[returnKey]
+        else
+          return true
+        end
+      end
+    end
+  end
+  return false
 end
 
 --FUNCTIONS TO REMEMBER--
