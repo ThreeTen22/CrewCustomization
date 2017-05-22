@@ -3,11 +3,6 @@ function init()
 	return
 end
 
-function update(dt)
-	return
-end
-
-function onInteraction(args)
-	dLog("hit!")
-	return {"ScriptPane", config.getParameter("uiConfig")}
+function die()
+	world.containerTakeAll(entity.id())
 end

@@ -149,28 +149,43 @@ end
 
 local function getStorageWardrobe()
   dLog("companions:  gettingStorageWardrobe")
-  local baseOutfits = {}
+  local baseOutfit = {}
   local crew = {}
   local playerInfo = storage.playerInfo or {}
 
-  for k,v in pairs(storage.baseOutfits or {}) do
-    baseOutfits[k] = v
+  for k,v in pairs(storage.baseOutfit or {}) do
+    baseOutfit[k] = v
   end
 
   recruitSpawner:forEachCrewMember(function(recruit)
     local crewmember = {}
     		crewmember.identity = recruit.spawnConfig.parameters.identity
     		crewmember.npcType = recruit.spawnConfig.type
-    		crewmember.podUuid = recruit.podUuid
+    		crewmember.Uuid = recruit.podUuid
   	crew[recruit.podUuid] = crewmember
   end)
 
-  return {baseOutfits = baseOutfits, crew = crew, playerInfo = playerInfo}
+  return {baseOutfit = baseOutfit, crew = crew, playerInfo = playerInfo}
+end
+
+local function setStorageWardrobe(args)
+	dLogJson(args, "SET STORAGE:")
+	for k,v in pairs(args) do
+		storage[k] = v
+	end
+end
+
+local function clearStorage(args)
+	for _,v in pairs(args) do
+		storage[v] = nil
+	end
 end
 
 function wardrobeManager:init()
+  clearStorage({"baseOutfit"})
   message.setHandler("wardrobeManager.getStorage",localHandler(getStorageWardrobe))
-
+  message.setHandler("wardrobeManager.setStorage",localHandler(setStorageWardrobe))
+  message.setHandler("debug.clearStorage", localHandler(clearStorage))
   if not storage.wardrobes then storage.wardrobes = {} end
   self.planetTypes = crewutil.getPlanetTypes()
   self.planetType = crewutil.getPlanetType()
@@ -253,6 +268,5 @@ end
 local oldUninitCE = uninit
 function uninit()
 	wardrobeManager:storeWardrobes()
-	--dLogJson(getStorageWardrobe(), "storedWardrobes", true)
  	return oldUninitCE()
 end

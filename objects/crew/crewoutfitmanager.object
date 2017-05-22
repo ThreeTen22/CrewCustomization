@@ -16,7 +16,7 @@
   "frameCooldown" : 5,
   "autoCloseCooldown" : 3600,
   "scripts" : ["/objects/crew/outfitobjectscript.lua"],
-  "scriptDelta" : 30,
+  "scriptDelta" : 0,
   "smashOnBreak" : false,
   "inventoryIcon" : "backgroundpanel.png",
   "isContainer": true,
