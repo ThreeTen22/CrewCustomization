@@ -1,5 +1,6 @@
 --require "/scripts/npcspawnutil.lua"
 --I GOT PLANS BABY...I GOT PLANS
+require "/scripts/companions/crewutil.lua"
 
 wardrobeManager = {}
 
@@ -161,7 +162,8 @@ local function getStorageWardrobe()
     local crewmember = {}
     		crewmember.identity = recruit.spawnConfig.parameters.identity
     		crewmember.npcType = recruit.spawnConfig.type
-    		crewmember.Uuid = recruit.podUuid
+    		crewmember.podUuid = recruit.podUuid
+    		crewmember.uniqueId = recruit.uniqueId
   	crew[recruit.podUuid] = crewmember
   end)
 
@@ -258,8 +260,7 @@ end
 
 
 local oldInitCE = init
-function init()
-	require "/scripts/companions/crewutil.lua"
+function init()	
 	local returnValue = oldInitCE()
  	wardrobeManager:init()
  	return returnValue

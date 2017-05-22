@@ -6,13 +6,11 @@ require "/scripts/companions/crewutil.lua"
 --[[NOTES:
 	timer can be manipulated to use coroutines.  give coroutine as function,  pass coroutine in as variable
 --]]
-outfitManager, baseOutfit, crewmember, refreshManager = {}, {}, {}, {}
+outfitManager, baseOutfit, crewmember, refreshManager, visibilityManager = {}, {}, {}, {}, {}
 outfitManager.__index = outfitManager
 baseOutfit.__index = baseOutfit
 crewmember.__index = crewmember
 refreshManager.__index = refreshManager
-
-visibilityManager = {}
 visibilityManager.__index = visibilityManager
 --[[
 
@@ -59,6 +57,7 @@ function updateInit(args)
 	outfitManager:loadPlayer(2)
 	outfitManager:load("crew", crewmember)
 	outfitManager:load("baseOutfit", baseOutfit)
+	outfitManager:setupTailor()
 
 	listOutfits()
 	updatePortrait()
@@ -147,14 +146,17 @@ function crewmember.new(...)
 end
 
 function crewmember:init(stored)
-	self.Uuid = stored.UuId
+	self.podUuid = stored.podUuid
 	self.npcType = stored.npcType
 	self.identity = stored.identity
 	self.portrait = stored.portrait
+	self.uniqueId = stored.uniqueId
 end
 
-function crewmember:getPortrait(portraitType)
-	return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, {identity = self.identity})
+function crewmember:getPortrait(portraitType, naked)
+	local parameters = {identity = self.identity}
+
+	return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, parameters)
 end
 
 --[[
@@ -172,7 +174,7 @@ end
 function baseOutfit:init(stored)
 	stored = stored or {}
 	self.items = stored.items or {}
-	self.Uuid = stored.Uuid or sb.makeUuid()
+	self.podUuid = stored.podUuid or sb.makeUuid()
 	self.displayName = stored.displayName or "-- CHANGE ME --"
 	self.listItem = nil
 end
@@ -180,7 +182,7 @@ end
 function baseOutfit:toJson()
 	local json = {}
 	json.items = self.items
-	json.Uuid = self.Uuid
+	json.podUuid = self.podUuid
 	json.displayName = self.displayName
 	return json
 end
@@ -209,7 +211,7 @@ end
 
 function outfitManager:addUnique(key, class, storedValue)
 	local newClass = class.new(storedValue)
-	local uniqueId = newClass.Uuid
+	local uniqueId = newClass.podUuid
 	self[key][uniqueId] = newClass
 	return self[key][uniqueId]
 end
@@ -227,7 +229,7 @@ function outfitManager:loadPlayer(step)
 
 		initTable.identity = getPlayerIdentity(portrait)
 		initTable.npcType = "nakedvillager"
-		initTable.UuId = playerUuid
+		initTable.podUuid = playerUuid
 		self.playerParameters = copy(initTable)
 		return self:addUnique("crew", crewmember, initTable)
 	end
@@ -262,9 +264,16 @@ function outfitManager:getSelectedOutfit()
 	end
 end
 
+function outfitManager:setupTailor()
+	self.tailor = nil
+	self:forEachElementInTable("crew", function(recruit)
+	    if recruit.npcType == "crewmembertailor" then
+	    	self.tailor = recruit
+	    	return true
+	    end
+	end)
 
-
-
+end
 
 function setupOutfits(args)
 
@@ -318,13 +327,13 @@ function outfitSelected()
 			outfit.listItem = newItem
 		end
 		widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
-		widget.setData(dataPath:format(newItem), outfit.Uuid)
+		widget.setData(dataPath:format(newItem), outfit.podUuid)
 		dLogJson(outfit:toJson(),"NEW OUTFIT MADE:  ", true)
 		return widget.setListSelected(listPath, newItem)
 	end
 	dLogJson(outfit:toJson(), "OUTFIT CHOSEN", true)
 	widget.setText("tbOutfitName", outfit.displayName)
-	widget.setData("btnAcceptOutfitName", outfit.Uuid)
+	widget.setData("btnAcceptOutfitName", outfit.podUuid)
 
 	for i = 1, self.slotCount do
 		local item = outfit.items[i]
@@ -473,7 +482,7 @@ function uninit()
 	storage.baseOutfit = {}
 	outfitManager:forEachElementInTable("baseOutfit", function(v)
 		local json = v:toJson()
-		storage.baseOutfit[v.Uuid] = json
+		storage.baseOutfit[v.podUuid] = json
 	end)
 	storage.crew = nil
 	world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.setStorage", storage)
