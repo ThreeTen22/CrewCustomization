@@ -52,6 +52,7 @@ function update(dt)
 end
 
 function updateInit(args)
+	dLogJson("updateInit", args, true)
 	storage.baseOutfit = args.baseOutfit or {}
 	storage.crew = args.crew or {}
 
@@ -467,3 +468,13 @@ function updateOutfitName(id, data)
 		widget.setText(subWidgetPath:format(listItem, "title"), text)
 end
 
+
+function uninit()
+	storage.baseOutfit = {}
+	outfitManager:forEachElementInTable("baseOutfit", function(v)
+		local json = v:toJson()
+		storage.baseOutfit[v.Uuid] = json
+	end)
+	storage.crew = nil
+	world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.setStorage", storage)
+end
