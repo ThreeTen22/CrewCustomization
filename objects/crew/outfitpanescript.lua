@@ -437,8 +437,8 @@ function checkForItemChanges(itemBag)
     for i = 1, self.slotCount do
       if not compare(self.itemBagStorage[i], itemBag[i]) then
         if itemBag[i] ~= nil and (not inCorrectSlot(i, itemBag[i])) then
-        	--world.containerTakeAt(pane.containerEntityId(), i-1)
-        	--player.giveItem(itemBag[i])
+        	world.containerTakeAt(pane.containerEntityId(), i-1)
+        	player.giveItem(itemBag[i])
         end
         contentsChanged = true
         break

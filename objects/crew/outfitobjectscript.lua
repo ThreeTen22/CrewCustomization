@@ -3,6 +3,6 @@ function init()
 	return
 end
 
-function update(dt)
-	return
+function die()
+	world.containerTakeAll(entity.id())
 end
