@@ -39,7 +39,7 @@ function init()
 	refreshManager:init()
 	visibilityManager:init()
 	outfitManager:loadPlayer(1)
-	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), updateInit)
+	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), outfitInit)
 	return
 end
 
@@ -49,7 +49,7 @@ function update(dt)
 	refreshManager:update()
 end
 
-function updateInit(args)
+function outfitInit(args)
 	dLogJson("updateInit", args, true)
 	storage.baseOutfit = args.baseOutfit or {}
 	storage.crew = args.crew or {}
@@ -57,10 +57,8 @@ function updateInit(args)
 	outfitManager:loadPlayer(2)
 	outfitManager:load("crew", crewmember)
 	outfitManager:load("baseOutfit", baseOutfit)
-	outfitManager:setupTailor()
-
+	outfitManager:getTailorInfo()
 	listOutfits()
-	updatePortrait()
 
 	update = updateMain
 end
@@ -211,9 +209,9 @@ end
 
 function outfitManager:addUnique(key, class, storedValue)
 	local newClass = class.new(storedValue)
-	local uniqueId = newClass.podUuid
-	self[key][uniqueId] = newClass
-	return self[key][uniqueId]
+	local uId = newClass.podUuid
+	self[key][uId] = newClass
+	return self[key][uId]
 end
 
 function outfitManager:loadPlayer(step)
@@ -235,14 +233,14 @@ function outfitManager:loadPlayer(step)
 	end
 end
 
-function outfitManager:setDisplayName(uniqueId, displayName)
-	if self.baseOutfit[uniqueId] then
-		self.baseOutfit[uniqueId].displayName = displayName
+function outfitManager:setDisplayName(uId, displayName)
+	if self.baseOutfit[uId] then
+		self.baseOutfit[uId].displayName = displayName
 	end
 end
 
-function outfitManager:getBaseOutfit(uniqueId)
-	return self.baseOutfit[uniqueId]
+function outfitManager:getBaseOutfit(uId)
+	return self.baseOutfit[uId]
 end
 
 function outfitManager:getWidgetPaths()
@@ -264,33 +262,39 @@ function outfitManager:getSelectedOutfit()
 	end
 end
 
-function outfitManager:setupTailor()
-	self.tailor = nil
-	self:forEachElementInTable("crew", function(recruit)
-	    if recruit.npcType == "crewmembertailor" then
-	    	self.tailor = recruit
-	    	return true
-	    end
-	end)
-
+function outfitManager:getTailorInfo(podUuid)
+	local tailor = nil
+	if podUuid then
+		tailor = self.crew[podUuid]
+	else
+		self:forEachElementInTable("crew", function(recruit)
+		    if recruit.npcType == "crewmembertailor" then
+		    	tailor = recruit
+		    	return true
+		    end
+		end)
+	end
+	if tailor then
+		local uniqueId = tailor.uniqueId
+		promises:add(world.sendEntityMessage(pane.containerEntityId(), "entityportrait", uniqueId, "bust"), setTailorPortrait)
+		world.sendEntityMessage(pane.containerEntityId(), "blinkcrewmember", uniqueId, player.id())
+	end
 end
 
-function setupOutfits(args)
-
-
+function setTailorPortrait(args)
+	--dLogJson(args, "setTailorPortrait: args", true)
 end
 
 function updatePortrait(crewId)
 	crewId = crewId or player.uniqueId()
 	local portraits = config.getParameter("portraitNames")
 	local selectedOutfit = outfitManager:getSelectedOutfit() or {}
-	local npc = outfitManager.crew[crewId]
+	local npc = outfitManager.crew[crewId] or outfitManager.crew[player.uniqueId{}]
 	local num = 1
 	local parameters = {}
 	parameters.identity = npc.identity
 
 	if selectedOutfit.items then
-
 		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(self.itemSlot, selectedOutfit.items))
 	end
 	dLogJson(parameters, "updatePortrait: parameters", true)
