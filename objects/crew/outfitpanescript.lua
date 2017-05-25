@@ -73,7 +73,7 @@ function updateMain()
 		end
 		
 	end
-	self.itemBagStorage = widget.itemGridItems("itemGrid") 
+	self.itemBagStorage = widget.itemGridItems("itemGrid")
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
@@ -86,7 +86,8 @@ end
 --]]
 
 function visibilityManager:init()
-	local config = config.getParameter("refreshManager")
+	local config = config.getParameter("visibilityManager")
+	config.dummy = nil
 	for k,v in pairs(config) do
 		self[k] = v
 	end
@@ -281,8 +282,19 @@ function outfitManager:getTailorInfo(podUuid)
 	end
 end
 
-function setTailorPortrait(args)
-	--dLogJson(args, "setTailorPortrait: args", true)
+function setTailorPortrait(npcPort)
+	dLogJson(npcPort, "npcPort")
+	local portraits = config.getParameter("tailorPortraitNames")
+	local num = 1
+	while num <= #npcPort do
+		widget.setImage(portraits[num], npcPort[num].image)
+		widget.setVisible(portraits[num], true)
+		num = num+1
+	end
+	while num <= #portraits do
+		widget.setVisible(portraits[num], false)
+		num = num+1
+	end
 end
 
 function updatePortrait(crewId)

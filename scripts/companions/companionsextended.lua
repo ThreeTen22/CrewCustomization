@@ -89,10 +89,6 @@ function outfit:overrideParams(parameters)
   end
   setPath(parameters.scriptConfig, "behaviorConfig", "emptyHands", self.emptyHands)
   
-  --if self.hasArmor then
-  --  setPath(parameters.scriptConfig,"crew","uniformSlots",crewutil.armorSlots)
-  --  --setPath(parameters.scriptConfig,"crew","role","uniformColorIndex", "")
-  --end
   return parameters
 end
 
