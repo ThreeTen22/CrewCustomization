@@ -24,7 +24,7 @@
   "interactive" : true,
   "orientations" : [
     {
-      "image" : "backgroundpanel.png",
+      "image" : "backgroundpanel.png?setcolor=131313",
       "imagePosition" : [-8, 0],
       "frames" : 1,
       "animationCycle" : 0.5,
@@ -36,7 +36,7 @@
       "anchors" : [ "background" ]
     },
     {
-      "image" : "backgroundpanel.png",
+      "image" : "backgroundpanel.png?setcolor=131313",
       "imagePosition" : [-8, 0],
       "frames" : 1,
       "animationCycle" : 0.5,
