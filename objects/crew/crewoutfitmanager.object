@@ -18,7 +18,7 @@
   "scripts" : ["/objects/crew/outfitobjectscript.lua"],
   "scriptDelta" : 0,
   "smashOnBreak" : false,
-  "inventoryIcon" : "backgroundpanel.png",
+  "inventoryIcon" : "backgroundpanel.png?scalenearest=0.5",
   "isContainer": true,
   "smashable" : false,
   "interactive" : true,

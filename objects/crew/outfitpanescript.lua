@@ -35,6 +35,7 @@ function init()
 	if not storage then storage = {} end
 	self = config.getParameter("initVars")
 	self.itemBagStorage = widget.itemGridItems("itemGrid")
+	self.clearingList = false
 	outfitManager:init()
 	refreshManager:init()
 	visibilityManager:init()
@@ -59,6 +60,7 @@ function outfitInit(args)
 	outfitManager:load("baseOutfit", baseOutfit)
 	outfitManager:getTailorInfo()
 	listOutfits()
+	updatePortrait()
 
 	update = updateMain
 end
@@ -126,7 +128,11 @@ function refreshManager:update()
 			func()
 		elseif type(func) == "table" then
 			local args = func.args
-			func.func(args)
+			if func.unpack then
+				func.func(table.unpack(args))
+			else
+				func.func(args)
+			end
 		end
 	end
 	-- body
@@ -240,8 +246,8 @@ function outfitManager:setDisplayName(uId, displayName)
 	end
 end
 
-function outfitManager:getBaseOutfit(uId)
-	return self.baseOutfit[uId]
+function outfitManager:getBaseOutfit(podUuid)
+	return self.baseOutfit[podUuid]
 end
 
 function outfitManager:getWidgetPaths()
@@ -261,6 +267,17 @@ function outfitManager:getSelectedOutfit()
 	if data then
 		return self:getBaseOutfit(data)
 	end
+end
+
+function outfitManager:deleteOutfit(uId)
+	if uId then
+		self.baseOutfit[uId] = nil
+	end
+end
+
+function outfitManager:deleteSelectedOutfit()
+	local data = getSelectedListData(self.listPath)
+	return self:deleteOutfit(data)
 end
 
 function outfitManager:getTailorInfo(podUuid)
@@ -324,16 +341,16 @@ function updatePortrait(crewId)
 end
 
 function outfitSelected()
+	if self.clearingList then return end
 	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
 	local data = getSelectedListData(listPath)
-
 	dCompare("outfitSelected", listPath, data)
 	
 	world.containerTakeAll(pane.containerEntityId())
 	local outfit = outfitManager:getBaseOutfit(data)
 	if not outfit then
 		local newItem = nil
-		local hasUnsavedOutfit, outfitUuid = crewutil.subTableElementEqualsValue(outfitManager.baseOutfit, "displayName", "-- CHANGE ME --", "Uuid")
+		local hasUnsavedOutfit, outfitUuid = crewutil.subTableElementEqualsValue(outfitManager.baseOutfit, "displayName", "-- CHANGE ME --", "podUuid")
 		if hasUnsavedOutfit then
 			outfit = outfitManager:getBaseOutfit(outfitUuid)
 			newItem = outfit.listItem
@@ -357,19 +374,20 @@ function outfitSelected()
 			world.containerItemApply(pane.containerEntityId(), item, i-1)
 		end
 	end
-
+	refreshManager:queue("updatePortrait", updatePortrait)
 	return visibilityManager:setVisible("outfitRect", true)
 end
 
 function listOutfits(filter)
 	local index = 2
 	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
+	self.clearingList = true
 	widget.clearListItems(listPath)
-
 	local newItem = widget.addListItem(listPath)
 	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
 	widget.setData(dataPath:format(newItem), "-- NEW --")
 	local sortedTable, keyTable = crewutil.sortedTablesByValue(outfitManager.baseOutfit, "displayName")
+	self.clearingList = false
 	if not (sortedTable and keyTable) then
 	 	dCompare("nil sortedTable or keyTable", sortedTable, keyTable)
 	 	return 
@@ -492,6 +510,23 @@ function updateOutfitName(id, data)
 		outfitManager:setDisplayName(outfitUuid, text)
 		widget.setText(subWidgetPath:format(listItem, "title"), text)
 end
+
+function deleteOutfit()
+	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
+	local items = widget.itemGridItems("itemGrid")
+	dLogJson(items, "deleteOutfit - ITEMS")
+	---[[
+	for k, v in pairs(items) do
+		if k and v then
+			player.giveItem(v)
+		end
+	end
+	--]]
+	world.containerTakeAll(pane.containerEntityId())
+	outfitManager:deleteSelectedOutfit()
+	visibilityManager:setVisible("outfitRect", false)
+	refreshManager:queue("listOutfits", listOutfits)
+end	
 
 
 function uninit()
