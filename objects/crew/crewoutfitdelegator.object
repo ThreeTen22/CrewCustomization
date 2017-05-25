@@ -1,0 +1,54 @@
+{
+  "objectName" : "crewoutfitdelegator",
+  "tags" : ["misc"],
+  "rarity" : "legendary",
+  "description" : "Assign outfits to youself and various crewmebers",
+  "shortdescription" : "The Armory",
+  "subtitle" : "Good luck figuring that out",
+  "race" : "generic",
+  "price" : 15000,
+  "category" : "Outfit Delegation",
+  "tooltipKind" : "object",
+  "genericDescription" : "Assign outfits to youself and various crewmebers",
+  "objectType" : "container",
+  "slotCount" : 12,
+  "openSounds" : ["/sfx/objects/miningchest_open.ogg"],
+  "frameCooldown" : 5,
+  "autoCloseCooldown" : 3600,
+  "scripts" : ["/objects/crew/outfitobjectscript.lua"],
+  "scriptDelta" : 0,
+  "smashOnBreak" : false,
+  "inventoryIcon" : "backgroundpanel.png?scalenearest=0.5",
+  "isContainer": true,
+  "smashable" : false,
+  "interactive" : true,
+  "orientations" : [
+    {
+      "image" : "backgroundpanel.png",
+      "imagePosition" : [-8, 0],
+      "frames" : 1,
+      "animationCycle" : 0.5,
+      "direction" : "left",
+      "flipImages" : true,
+      "animationPosition" : [-8, 0],
+      "lightPosition" : [0, 3],
+      "spaceScan" : 0.1,
+      "anchors" : [ "background" ]
+    },
+    {
+      "image" : "backgroundpanel.png",
+      "imagePosition" : [-8, 0],
+      "frames" : 1,
+      "animationCycle" : 0.5,
+      "direction" : "right",
+      "flipImages" : false,
+      "animationPosition" : [-8, 0],
+      "lightPosition" : [0, 3],
+
+      "spaceScan" : 0.1,
+      "anchors" : [ "background" ]
+    }
+  ],
+  "uiConfig" : "/objects/crew/outfitpanedelegate.config"
+}
+

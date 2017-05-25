@@ -2,6 +2,8 @@
 --I GOT PLANS BABY...I GOT PLANS
 require "/scripts/companions/crewutil.lua"
 
+
+
 wardrobeManager = {}
 
 wardrobe = {}
@@ -19,6 +21,8 @@ end
 
 function outfit:init(recruitUuId,storedOutfit)
   if storedOutfit then
+  	self.buildOutfit = false
+  	self.podUuid = recruitUuId
     self.hasArmor = storedOutfit.hasArmor
     self.hasWeapons = storedOutfit.hasWeapons
     self.items = storedOutfit.items
@@ -26,6 +30,7 @@ function outfit:init(recruitUuId,storedOutfit)
     self.name = storeOutfit.name
   else
     local recruit = recruitSpawner:getRecruit(recruitUuId)
+    self.buildOutfit = true
     self:buildOutfit(recruit)
   end
 end

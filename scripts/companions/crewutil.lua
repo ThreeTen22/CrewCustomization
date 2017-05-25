@@ -8,8 +8,6 @@ crewutil = {
 
 timer = createTimers()
 
-
-
 function dLog(item, prefix)
   if not prefix then prefix = "" end
   if type(item) ~= "string" then
