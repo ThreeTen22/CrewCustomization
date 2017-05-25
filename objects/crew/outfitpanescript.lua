@@ -6,13 +6,11 @@ require "/scripts/companions/crewutil.lua"
 --[[NOTES:
 	timer can be manipulated to use coroutines.  give coroutine as function,  pass coroutine in as variable
 --]]
-outfitManager, baseOutfit, crewmember, refreshManager = {}, {}, {}, {}
+outfitManager, baseOutfit, crewmember, refreshManager, visibilityManager = {}, {}, {}, {}, {}
 outfitManager.__index = outfitManager
 baseOutfit.__index = baseOutfit
 crewmember.__index = crewmember
 refreshManager.__index = refreshManager
-
-visibilityManager = {}
 visibilityManager.__index = visibilityManager
 --[[
 
@@ -37,11 +35,12 @@ function init()
 	if not storage then storage = {} end
 	self = config.getParameter("initVars")
 	self.itemBagStorage = widget.itemGridItems("itemGrid")
+	self.clearingList = false
 	outfitManager:init()
 	refreshManager:init()
 	visibilityManager:init()
 	outfitManager:loadPlayer(1)
-	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), updateInit)
+	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), outfitInit)
 	return
 end
 
@@ -51,7 +50,7 @@ function update(dt)
 	refreshManager:update()
 end
 
-function updateInit(args)
+function outfitInit(args)
 	dLogJson("updateInit", args, true)
 	storage.baseOutfit = args.baseOutfit or {}
 	storage.crew = args.crew or {}
@@ -59,7 +58,7 @@ function updateInit(args)
 	outfitManager:loadPlayer(2)
 	outfitManager:load("crew", crewmember)
 	outfitManager:load("baseOutfit", baseOutfit)
-
+	outfitManager:getTailorInfo()
 	listOutfits()
 	updatePortrait()
 
@@ -76,7 +75,7 @@ function updateMain()
 		end
 		
 	end
-	self.itemBagStorage = widget.itemGridItems("itemGrid") 
+	self.itemBagStorage = widget.itemGridItems("itemGrid")
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
@@ -89,7 +88,8 @@ end
 --]]
 
 function visibilityManager:init()
-	local config = config.getParameter("refreshManager")
+	local config = config.getParameter("visibilityManager")
+	config.dummy = nil
 	for k,v in pairs(config) do
 		self[k] = v
 	end
@@ -128,7 +128,11 @@ function refreshManager:update()
 			func()
 		elseif type(func) == "table" then
 			local args = func.args
-			func.func(args)
+			if func.unpack then
+				func.func(table.unpack(args))
+			else
+				func.func(args)
+			end
 		end
 	end
 	-- body
@@ -147,14 +151,17 @@ function crewmember.new(...)
 end
 
 function crewmember:init(stored)
-	self.Uuid = stored.UuId
+	self.podUuid = stored.podUuid
 	self.npcType = stored.npcType
 	self.identity = stored.identity
 	self.portrait = stored.portrait
+	self.uniqueId = stored.uniqueId
 end
 
-function crewmember:getPortrait(portraitType)
-	return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, {identity = self.identity})
+function crewmember:getPortrait(portraitType, naked)
+	local parameters = {identity = self.identity}
+
+	return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, parameters)
 end
 
 --[[
@@ -172,7 +179,7 @@ end
 function baseOutfit:init(stored)
 	stored = stored or {}
 	self.items = stored.items or {}
-	self.Uuid = stored.Uuid or sb.makeUuid()
+	self.podUuid = stored.podUuid or sb.makeUuid()
 	self.displayName = stored.displayName or "-- CHANGE ME --"
 	self.listItem = nil
 end
@@ -180,7 +187,7 @@ end
 function baseOutfit:toJson()
 	local json = {}
 	json.items = self.items
-	json.Uuid = self.Uuid
+	json.podUuid = self.podUuid
 	json.displayName = self.displayName
 	return json
 end
@@ -209,9 +216,9 @@ end
 
 function outfitManager:addUnique(key, class, storedValue)
 	local newClass = class.new(storedValue)
-	local uniqueId = newClass.Uuid
-	self[key][uniqueId] = newClass
-	return self[key][uniqueId]
+	local uId = newClass.podUuid
+	self[key][uId] = newClass
+	return self[key][uId]
 end
 
 function outfitManager:loadPlayer(step)
@@ -227,20 +234,20 @@ function outfitManager:loadPlayer(step)
 
 		initTable.identity = getPlayerIdentity(portrait)
 		initTable.npcType = "nakedvillager"
-		initTable.UuId = playerUuid
+		initTable.podUuid = playerUuid
 		self.playerParameters = copy(initTable)
 		return self:addUnique("crew", crewmember, initTable)
 	end
 end
 
-function outfitManager:setDisplayName(uniqueId, displayName)
-	if self.baseOutfit[uniqueId] then
-		self.baseOutfit[uniqueId].displayName = displayName
+function outfitManager:setDisplayName(uId, displayName)
+	if self.baseOutfit[uId] then
+		self.baseOutfit[uId].displayName = displayName
 	end
 end
 
-function outfitManager:getBaseOutfit(uniqueId)
-	return self.baseOutfit[uniqueId]
+function outfitManager:getBaseOutfit(podUuid)
+	return self.baseOutfit[podUuid]
 end
 
 function outfitManager:getWidgetPaths()
@@ -262,26 +269,61 @@ function outfitManager:getSelectedOutfit()
 	end
 end
 
+function outfitManager:deleteOutfit(uId)
+	if uId then
+		self.baseOutfit[uId] = nil
+	end
+end
 
+function outfitManager:deleteSelectedOutfit()
+	local data = getSelectedListData(self.listPath)
+	return self:deleteOutfit(data)
+end
 
+function outfitManager:getTailorInfo(podUuid)
+	local tailor = nil
+	if podUuid then
+		tailor = self.crew[podUuid]
+	else
+		self:forEachElementInTable("crew", function(recruit)
+		    if recruit.npcType == "crewmembertailor" then
+		    	tailor = recruit
+		    	return true
+		    end
+		end)
+	end
+	if tailor then
+		local uniqueId = tailor.uniqueId
+		promises:add(world.sendEntityMessage(pane.containerEntityId(), "entityportrait", uniqueId, "bust"), setTailorPortrait)
+		world.sendEntityMessage(pane.containerEntityId(), "blinkcrewmember", uniqueId, player.id())
+	end
+end
 
-
-function setupOutfits(args)
-
-
+function setTailorPortrait(npcPort)
+	dLogJson(npcPort, "npcPort")
+	local portraits = config.getParameter("tailorPortraitNames")
+	local num = 1
+	while num <= #npcPort do
+		widget.setImage(portraits[num], npcPort[num].image)
+		widget.setVisible(portraits[num], true)
+		num = num+1
+	end
+	while num <= #portraits do
+		widget.setVisible(portraits[num], false)
+		num = num+1
+	end
 end
 
 function updatePortrait(crewId)
 	crewId = crewId or player.uniqueId()
 	local portraits = config.getParameter("portraitNames")
 	local selectedOutfit = outfitManager:getSelectedOutfit() or {}
-	local npc = outfitManager.crew[crewId]
+	local npc = outfitManager.crew[crewId] or outfitManager.crew[player.uniqueId{}]
 	local num = 1
 	local parameters = {}
 	parameters.identity = npc.identity
 
 	if selectedOutfit.items then
-
 		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(self.itemSlot, selectedOutfit.items))
 	end
 	dLogJson(parameters, "updatePortrait: parameters", true)
@@ -299,16 +341,16 @@ function updatePortrait(crewId)
 end
 
 function outfitSelected()
+	if self.clearingList then return end
 	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
 	local data = getSelectedListData(listPath)
-
 	dCompare("outfitSelected", listPath, data)
 	
 	world.containerTakeAll(pane.containerEntityId())
 	local outfit = outfitManager:getBaseOutfit(data)
 	if not outfit then
 		local newItem = nil
-		local hasUnsavedOutfit, outfitUuid = crewutil.subTableElementEqualsValue(outfitManager.baseOutfit, "displayName", "-- CHANGE ME --", "Uuid")
+		local hasUnsavedOutfit, outfitUuid = crewutil.subTableElementEqualsValue(outfitManager.baseOutfit, "displayName", "-- CHANGE ME --", "podUuid")
 		if hasUnsavedOutfit then
 			outfit = outfitManager:getBaseOutfit(outfitUuid)
 			newItem = outfit.listItem
@@ -318,13 +360,13 @@ function outfitSelected()
 			outfit.listItem = newItem
 		end
 		widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
-		widget.setData(dataPath:format(newItem), outfit.Uuid)
+		widget.setData(dataPath:format(newItem), outfit.podUuid)
 		dLogJson(outfit:toJson(),"NEW OUTFIT MADE:  ", true)
 		return widget.setListSelected(listPath, newItem)
 	end
 	dLogJson(outfit:toJson(), "OUTFIT CHOSEN", true)
 	widget.setText("tbOutfitName", outfit.displayName)
-	widget.setData("btnAcceptOutfitName", outfit.Uuid)
+	widget.setData("btnAcceptOutfitName", outfit.podUuid)
 
 	for i = 1, self.slotCount do
 		local item = outfit.items[i]
@@ -332,19 +374,20 @@ function outfitSelected()
 			world.containerItemApply(pane.containerEntityId(), item, i-1)
 		end
 	end
-
+	refreshManager:queue("updatePortrait", updatePortrait)
 	return visibilityManager:setVisible("outfitRect", true)
 end
 
 function listOutfits(filter)
 	local index = 2
 	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
+	self.clearingList = true
 	widget.clearListItems(listPath)
-
 	local newItem = widget.addListItem(listPath)
 	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
 	widget.setData(dataPath:format(newItem), "-- NEW --")
 	local sortedTable, keyTable = crewutil.sortedTablesByValue(outfitManager.baseOutfit, "displayName")
+	self.clearingList = false
 	if not (sortedTable and keyTable) then
 	 	dCompare("nil sortedTable or keyTable", sortedTable, keyTable)
 	 	return 
@@ -468,12 +511,29 @@ function updateOutfitName(id, data)
 		widget.setText(subWidgetPath:format(listItem, "title"), text)
 end
 
+function deleteOutfit()
+	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
+	local items = widget.itemGridItems("itemGrid")
+	dLogJson(items, "deleteOutfit - ITEMS")
+	---[[
+	for k, v in pairs(items) do
+		if k and v then
+			player.giveItem(v)
+		end
+	end
+	--]]
+	world.containerTakeAll(pane.containerEntityId())
+	outfitManager:deleteSelectedOutfit()
+	visibilityManager:setVisible("outfitRect", false)
+	refreshManager:queue("listOutfits", listOutfits)
+end	
+
 
 function uninit()
 	storage.baseOutfit = {}
 	outfitManager:forEachElementInTable("baseOutfit", function(v)
 		local json = v:toJson()
-		storage.baseOutfit[v.Uuid] = json
+		storage.baseOutfit[v.podUuid] = json
 	end)
 	storage.crew = nil
 	world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.setStorage", storage)
