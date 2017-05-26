@@ -21,7 +21,7 @@ end
 
 function outfit:init(recruitUuId,storedOutfit)
   if storedOutfit then
-  	self.buildOutfit = false
+  	self.needsBuilding = false
   	self.podUuid = recruitUuId
     self.hasArmor = storedOutfit.hasArmor
     self.hasWeapons = storedOutfit.hasWeapons
@@ -30,7 +30,7 @@ function outfit:init(recruitUuId,storedOutfit)
     self.name = storeOutfit.name
   else
     local recruit = recruitSpawner:getRecruit(recruitUuId)
-    self.buildOutfit = true
+    self.needsBuilding = true
     self:buildOutfit(recruit)
   end
 end

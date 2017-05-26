@@ -1,5 +1,5 @@
 {
-  "objectName" : "crewoutfitdelegator",
+  "objectName" : "crewoutfitdelegate",
   "tags" : ["misc"],
   "rarity" : "legendary",
   "description" : "Assign outfits to youself and various crewmebers",
