@@ -6,12 +6,12 @@ require "/scripts/companions/paneutil.lua"
 
 function init()
 	if not storage then storage = {} end
-	self = config.getParameter("initVars")
 	self.itemBagStorage = widget.itemGridItems("itemGrid")
 	self.clearingList = false
+	paneManager:init()
 	outfitManager:init()
 	refreshManager:init()
-	paneManager:init()
+	
 	outfitManager:loadPlayer(1)
 	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), initExtended)
 	return
@@ -77,9 +77,10 @@ function updateOutfitPortrait(crewId)
 end
 
 function outfitSelected()
-	if self.clearingList then return end
+	if self.clearingList == true then return end
 	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
-	local data = getSelectedListData(listPath)
+	local data = paneManager:getSelectedListData("outfitList")
+	dLogJson(data, "DATA: ")
 	dCompare("outfitSelected", listPath, data)
 	
 	world.containerTakeAll(pane.containerEntityId())
@@ -97,14 +98,9 @@ function outfitSelected()
 		end
 		widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
 		widget.setData(dataPath:format(newItem), outfit.podUuid)
-		dLogJson(outfit:toJson(),"NEW OUTFIT MADE:  ", true)
 		return widget.setListSelected(listPath, newItem)
 	end
-	dLogJson(outfit:toJson(), "OUTFIT CHOSEN", true)
-	paneManager:batchSet("outfitRect", outfit)
-	--widget.setText("tbOutfitName", outfit.displayName)
-	--widget.setData("btnAcceptOutfitName", outfit.podUuid)
-	--widget.setData("btnDeleteOutfit", outfit.podUuid)
+	paneManager:batchSetWidgets("outfitRect", outfit)
 	for i = 1, #crewutil.itemSlots do
 		local item = outfit.items[i]
 		if item then
@@ -123,6 +119,7 @@ function listOutfits(filter)
 	local newItem = widget.addListItem(listPath)
 	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
 	widget.setData(dataPath:format(newItem), "-- NEW --")
+	dLogClass(outfitManager.baseOutfit, "baseOutfit")
 	local sortedTable, keyTable = crewutil.sortedTablesByValue(outfitManager.baseOutfit, "displayName")
 	self.clearingList = false
 	if not (sortedTable and keyTable) then
@@ -164,7 +161,7 @@ end
 function inCorrectSlot(index, itemDescription)
   local success, itemType = pcall(root.itemType, itemDescription.name)
   if success then 
-    if itemType == self.itemSlotType[index] then
+    if itemType == crewutil.itemSlotType[index] then
       return true
     end
   end
@@ -173,7 +170,7 @@ end
 
 
 function updateOutfitName(id, data)
-	local outfitUuid = data or widget.getData(id)
+	local outfitUuid =  data or widget.getData(id)
 	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	local listItem = widget.getListSelected(listPath)
 	local text = widget.getText("tbOutfitName") or "nil"
@@ -199,8 +196,12 @@ end
 function uninit()
 	storage.baseOutfit = {}
 	outfitManager:forEachElementInTable("baseOutfit", function(v)
-		local json = v:toJson()
-		storage.baseOutfit[v.podUuid] = json
+	    if v.displayName == "-- CHANGE ME --" and isEmpty(v.items) == false then 
+	    	local name = v.podUuid
+	    	local min = math.random(1,name:len()-10)
+	    	v.displayName = name:sub(min,min+10)
+	    end
+		storage.baseOutfit[v.podUuid] = v:toJson()
 	end)
 	storage.crew = nil
 	world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.setStorage", storage)

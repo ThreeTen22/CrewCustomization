@@ -6,7 +6,8 @@ require "/scripts/messageutil.lua"
 dComp = {}
 crewutil = {
   weapSlots = {"primary", "alt", "sheathedprimary", "sheathedalt"},
-  armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"}
+  armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"},
+  itemSlotType =  {"activeitem","activeitem","activeitem","activeitem","headarmor","headarmor","chestarmor","chestarmor","legsarmor","legsarmor","backarmor","backarmor"}
 }
 crewutil.itemSlots = util.mergeLists(crewutil.weapSlots, crewutil.armorSlots)
 
@@ -38,22 +39,46 @@ function dLogJson(input, prefix, clean)
   sb.logInfo("%s", str..info)
 end
 
-function dLogClass(input, prefix, clean)
-  local str = "self.%s - %s"
-  local output = {}
-  for k,v in pairs(input) do
-    if type(k) == "string" then
-      if type(v) == "table" then
-        v = sb.printJson(v, 0)
-      end
-      table.insert(output, str:format(k, v))
+--function dLogClass(input, prefix, clean)
+--  local str = "self.%s - %s"
+--  local output = {}
+--  for k,v in pairs(input) do
+--    if type(k) == "string" then
+--      if type(v) == "table" then
+--        v = sb.printJson(v, 0)
+--      end
+--      table.insert(output, str:format(k, v))
+--    end
+--  end
+--
+--  return dLogJson(output,prefix, clean)
+--  -- body
+--end
+
+function dLogClass(t, prefix)
+    local tType = type(t)
+    if tType == "function" then
+        dLog(string.format("%s (%s)",prefix,"func"))
+    elseif tType == "table" then
+        if isEmpty(t) == false then
+            for k,v in pairs(t) do
+                if not prefix:find("_index") then
+                    dLogClass(v, string.format("%s.%s",prefix, k))
+                else
+                    dLogClass(k, string.format("%s",prefix))
+                end
+            end
+        else
+            dLog(string.format("%s (%s)", prefix, "empty"))
+        end
+    else
+        if tType == "string" then
+            dLog(string.format("%s = \"%s\"",prefix, t))
+        else
+            dLog(string.format("%s = %s",prefix, t))
+        end
     end
-  end
-
-  return dLogJson(output,prefix, clean)
-  -- body
 end
-
 
 
 function dCompare(prefix, ...)

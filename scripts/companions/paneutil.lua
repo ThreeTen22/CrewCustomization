@@ -13,13 +13,13 @@ function getSpeciesPath(species, subPath)
     return string.format("/species/%s.species%s",species,subPath)
 end
 
-function getSelectedListData(listPath)
-  local itemId = widget.getListSelected(listPath)
-  if itemId then
-    local fullpath = string.format("%s.%s", listPath, itemId)
-    return widget.getData(fullpath)
-  end
-end
+--function getSelectedListData(listPath)
+--  local itemId = widget.getListSelected(listPath)
+--  if itemId then
+--    local fullpath = string.format("%s.%s", listPath, itemId)
+--    return widget.getData(fullpath)
+--  end
+--end
 
 
 --[[
@@ -31,13 +31,13 @@ end
 function paneManager:init()
   local config = config.getParameter("paneManager")
   local str = "paneManager.%s"
-  for k,_ in pairs(config) do
-    self[k] = str:format(k).."%s"
+  for k,v in pairs(config) do
+    self[k] = str:format(k)
   end
 end
 
 function paneManager:setVisible(key, bool)
-  for _,v in pairs(self:getConfig("rects",key,{})) do
+  for _,v in pairs(self:getConfig("rects",key)) do
     widget.setVisible(v, bool)
   end
 end
@@ -48,7 +48,7 @@ function paneManager:setPortrait(npcPort, portraits)
     widget.setVisible(portraits[num], true)
   end
 
-  for num = #npcPort, #portraits do
+  for num = #npcPort+1, #portraits do
     widget.setVisible(portraits[num], false)
   end
 end
@@ -59,27 +59,37 @@ function paneManager:setTailorPortrait(npcPort)
 end
 
 function paneManager:getListPaths(key)
-  local path = self:getConfig(self.listPaths, key, nil)
+  local path = self:getConfig("listPaths", key, nil)
   if path then
     return path, path..".%s", path..".%s.%s"
   end
 end
 
 function paneManager:getConfig(key, extra, default)
+  local path = self[key] or ""
   if extra then
-    if string.sub(extra, 1, 1) ~= "." then extra = "."..extra end
-  else 
-    extra = ""
+    path = string.format("%s.%s", path, extra)
   end
-  local path = self[key]..extra
   return config.getParameter(path, default)
 end
 
-function paneManager:batchSet(configKey, t)
+function paneManager:batchSetWidgets(configKey, t)
   local widgetNames = self:getConfig("batchSet",configKey, {})
   for k,v in pairs(widgetNames) do
-    widget[v[1]](k, t[v[2]])
+    for i = 1, #v, 2 do
+      widget[v[i]](k, jsonPath(t, v[i+1]))
+    end
   end
+end
+
+function paneManager:getSelectedListData(listName)
+    local path = self:getConfig("listPaths", listName, "")
+    local itemId = widget.getListSelected(path)
+    if itemId then
+      path = string.format("%s.%s", path, itemId)
+    end
+    dLog(path, "getSelectedListData")
+    return widget.getData(path)
 end
 --[[
 
@@ -141,10 +151,10 @@ end
 
 function crewmember:toJson()
   local json = {
-    podUuid = self.podUuid
-    npcType = self.npcType
-    identity = self.identity
-    portrait = self.portrait
+    podUuid = self.podUuid,
+    npcType = self.npcType,
+    identity = self.identity,
+    portrait = self.portrait,
     uniqueId = self.uniqueId
   }
   return json
@@ -197,13 +207,14 @@ end
 --]]
 
 function outfitManager:init(...)
-  self.crew = {}
-  self.baseOutfit = {}
-  self.widgetItems = {}
+  local config = config.getParameter("outfitManager")
+  for k,v in pairs(config) do
+    self[k] = v
+  end
+  dLog(self.connectedListName, "outfitManager:")
+  --self.crew = {}
+  --self.baseOutfit = {}
   self.playerParameters = nil
-  self.listPath = "outfitScrollArea.outfitList"
-  self.dataPath = "outfitScrollArea.outfitList.%s"
-  self.subWidgetPath = "outfitScrollArea.outfitList.%s.%s"
 end
 
 function outfitManager:load(key, class)
@@ -230,7 +241,7 @@ function outfitManager:loadPlayer(step)
 
     status.removeEphemeralEffect("nude") 
 
-    initTable.identity = crewutil.getPlayerIdentity bustPort)
+    initTable.identity = crewutil.getPlayerIdentity(bustPort)
     initTable.npcType = "nakedvillager"
     initTable.podUuid = playerUuid
     self.playerParameters = copy(initTable)
@@ -248,10 +259,6 @@ function outfitManager:getBaseOutfit(podUuid)
   return self.baseOutfit[podUuid]
 end
 
-function outfitManager:getWidgetPaths()
-  return self.listPath, self.dataPath, self.subWidgetPath
-end
-
 function outfitManager:forEachElementInTable(tableName, func)
   for k,v in pairs(self[tableName]) do
     if func(v) then
@@ -261,7 +268,7 @@ function outfitManager:forEachElementInTable(tableName, func)
 end
 
 function outfitManager:getSelectedOutfit()
-  local data = getSelectedListData(self.listPath)
+  local data = paneManager:getSelectedListData(self.connectedListName)
   if data then
     return self:getBaseOutfit(data)
   end
@@ -274,7 +281,7 @@ function outfitManager:deleteOutfit(uId)
 end
 
 function outfitManager:deleteSelectedOutfit()
-  local data = getSelectedListData(self.listPath)
+  local data = paneManager:getSelectedListData(self.connectedListName)
   return self:deleteOutfit(data)
 end
 
