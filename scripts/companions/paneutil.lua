@@ -2,12 +2,12 @@ require "/scripts/util.lua"
 require "/scripts/interp.lua"
 require "/scripts/messageutil.lua"
 
-outfitManager, baseOutfit, crewmember, refreshManager, visibilityManager = {}, {}, {}, {}, {}
+outfitManager, baseOutfit, crewmember, refreshManager, paneManager = {}, {}, {}, {}, {}
 outfitManager.__index = outfitManager
 baseOutfit.__index = baseOutfit
 crewmember.__index = crewmember
 refreshManager.__index = refreshManager
-visibilityManager.__index = visibilityManager
+paneManager.__index = paneManager
 
 function getSpeciesPath(species, subPath)          
     return string.format("/species/%s.species%s",species,subPath)
@@ -24,24 +24,63 @@ end
 
 --[[
 
-==  visibilityManager ==
+==  paneManager ==
 
 --]]
 
-function visibilityManager:init()
-  local config = config.getParameter("visibilityManager")
-  config.dummy = nil
-  for k,v in pairs(config) do
-    self[k] = v
+function paneManager:init()
+  local config = config.getParameter("paneManager")
+  local str = "paneManager.%s"
+  for k,_ in pairs(config) do
+    self[k] = str:format(k).."%s"
   end
 end
 
-function visibilityManager:setVisible(key, bool)
-  for _,v in pairs(self[key]) do
+function paneManager:setVisible(key, bool)
+  for _,v in pairs(self:getConfig("rects",key,{})) do
     widget.setVisible(v, bool)
   end
 end
 
+function paneManager:setPortrait(npcPort, portraits)
+  for num = 1, #npcPort do
+    widget.setImage(portraits[num], npcPort[num].image)
+    widget.setVisible(portraits[num], true)
+  end
+
+  for num = #npcPort, #portraits do
+    widget.setVisible(portraits[num], false)
+  end
+end
+
+function paneManager:setTailorPortrait(npcPort)
+  local portraits = config.getParameter("tailorPortraitNames")
+  return self:setPortrait(npcPort, portraits)
+end
+
+function paneManager:getListPaths(key)
+  local path = self:getConfig(self.listPaths, key, nil)
+  if path then
+    return path, path..".%s", path..".%s.%s"
+  end
+end
+
+function paneManager:getConfig(key, extra, default)
+  if extra then
+    if string.sub(extra, 1, 1) ~= "." then extra = "."..extra end
+  else 
+    extra = ""
+  end
+  local path = self[key]..extra
+  return config.getParameter(path, default)
+end
+
+function paneManager:batchSet(configKey, t)
+  local widgetNames = self:getConfig("batchSet",configKey, {})
+  for k,v in pairs(widgetNames) do
+    widget[v[1]](k, t[v[2]])
+  end
+end
 --[[
 
 ==  refreshManager ==
@@ -97,6 +136,18 @@ function crewmember:init(stored)
   self.identity = stored.identity
   self.portrait = stored.portrait
   self.uniqueId = stored.uniqueId
+  self.type = "crewmember"
+end
+
+function crewmember:toJson()
+  local json = {
+    podUuid = self.podUuid
+    npcType = self.npcType
+    identity = self.identity
+    portrait = self.portrait
+    uniqueId = self.uniqueId
+  }
+  return json
 end
 
 function crewmember:getPortrait(portraitType, naked)
@@ -123,6 +174,7 @@ function baseOutfit:init(stored)
   self.podUuid = stored.podUuid or sb.makeUuid()
   self.displayName = stored.displayName or "-- CHANGE ME --"
   self.listItem = nil
+  self.type = "baseOutfit"
 end
 
 function baseOutfit:toJson()
@@ -131,6 +183,11 @@ function baseOutfit:toJson()
   json.podUuid = self.podUuid
   json.displayName = self.displayName
   return json
+end
+
+
+function baseOutfit:set( ... )
+  -- body
 end
 
 --[[
@@ -168,12 +225,12 @@ function outfitManager:loadPlayer(step)
   elseif step == 2 then
     local initTable = {}
     local playerUuid = player.uniqueId() 
-    local portrait = world.entityPortrait(player.id(), "bust")
+    local bustPort = world.entityPortrait(player.id(), "bust")
     initTable.portrait = world.entityPortrait(player.id(), "head")
 
     status.removeEphemeralEffect("nude") 
 
-    initTable.identity = getPlayerIdentity(portrait)
+    initTable.identity = crewutil.getPlayerIdentity bustPort)
     initTable.npcType = "nakedvillager"
     initTable.podUuid = playerUuid
     self.playerParameters = copy(initTable)
@@ -234,19 +291,4 @@ function outfitManager:getTailorInfo(podUuid)
     end)
   end
   return tailor
-end
-
-function setTailorPortrait(npcPort)
-  dLogJson(npcPort, "npcPort")
-  local portraits = config.getParameter("tailorPortraitNames")
-  local num = 1
-  while num <= #npcPort do
-    widget.setImage(portraits[num], npcPort[num].image)
-    widget.setVisible(portraits[num], true)
-    num = num+1
-  end
-  while num <= #portraits do
-    widget.setVisible(portraits[num], false)
-    num = num+1
-  end
 end

@@ -49,6 +49,6 @@
       "anchors" : [ "background" ]
     }
   ],
-  "uiConfig" : "/objects/crew/outfitpanedelegate.config"
+  "uiConfig" : "/objects/crew/outfitpane.config"
 }
 

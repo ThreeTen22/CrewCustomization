@@ -1,9 +1,14 @@
 require "/npcs/timers.lua"
+require "/scripts/util.lua"
+require "/scripts/interp.lua"
+require "/scripts/messageutil.lua"
+
 dComp = {}
 crewutil = {
-  weapSlots = {"primary","sheathedprimary","alt","sheathedalt"},
+  weapSlots = {"primary", "alt", "sheathedprimary", "sheathedalt"},
   armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"}
 }
+crewutil.itemSlots = util.mergeLists(crewutil.weapSlots, crewutil.armorSlots)
 
 
 timer = createTimers()
@@ -51,35 +56,22 @@ end
 
 
 
-function dCompare(prefix, one, two)
+function dCompare(prefix, ...)
   dLog(prefix)
-  dComp[type(one)](one) 
-  dComp[type(two)](two)
+  local values = {...}
+  for _,v in ipairs(values) do
+    dComp[type(v)](v)
+  end
 end
 
-function dComp.string(input)
-  return dLog(input, "string: ")
-end
-
-function dComp.table(input)
-  return dLogJson(input, "table")
-end
-
-function dComp.number(input)
-  return dLog(input, "number")
-end
-
-function dComp.boolean(input)
-  return dLog(input, "bool: ")
-end
-
-function dComp.userdata(input)
-  return dLogJson(input, "userdata:")
-end
-
+function dComp.string(input) return dLog(input, "string: ") end
+function dComp.table(input) return dLogJson(input, "table") end
+function dComp.number(input) return dLog(input, "number") end
+function dComp.boolean(input) return dLog(input, "bool: ") end
+function dComp.userdata(input) return dLogJson(input, "userdata:") end
 dComp["thread"] = function(input) return dLog(input) end
-dComp["function"] = function(input) return sb.logInfo("%s", input) end
 dComp["nil"] = function(input) return dLog("nil") end
+dComp["function"] = function(input) return sb.logInfo("%s", input) end
 
 
 function getPathStr(t, str)
@@ -120,7 +112,6 @@ function crewutil.formatItemBag(itemSlot, itemBag)
   dLog("===formatItemBag===")
   local output = {}
   for i,v in pairs(itemBag) do
-      dLog(itemSlot[i])
     if v then
       local key = itemSlot[i] 
       output[key] = {}
@@ -281,6 +272,72 @@ function crewutil.subTableElementEqualsValue(t, subTableKey, value, returnKey)
     end
   end
   return false
+end
+
+function crewutil.getPlayerIdentity(portrait)
+  local identity = {}
+  identity.species = player.species()
+  identity.gender = player.gender()
+  identity.name = world.entityName(player.id())
+  
+  
+  local genderInfo = getAsset(getSpeciesPath(identity.species, ":genders"))
+
+  util.mapWithKeys(portrait, function(k,v)
+      local value = v.image:lower()
+
+      if value:find("malehead.png", 10, true) then
+      identity.personalityHeadOffset = v.position
+    elseif value:find("arm.png",10, true) then
+      identity.personalityArmOffset = v.position
+    end
+
+      value = value:match("/humanoid/.-/(.-)%?addmask=.*")
+      local directory, idle, directive = value:match("(.+)%.png:(.-)(%?.+)")
+
+    return {directory = directory, idle = idle, directive = directive}
+  end, portrait)
+
+  
+
+  for k,v in ipairs(portrait) do
+    local found = false
+    local directory = v.directory
+    local directive = v.directive
+    if directory:find("/") then
+      local partGroup, partType = directory:match("(.-)/(.+)")
+      if partGroup == "hair" then
+        identity.hairGroup = partGroup
+        identity.hairType = partType
+        identity.hairDirectives = directive
+        found = true 
+      end
+      for _,v in ipairs(genderInfo) do
+        if found then break end
+        for k,v in pairs(v) do
+          if v == partGroup then
+            identity[k] = partGroup
+            identity[k:gsub("Group","Type")] = partType
+            identity[k:gsub("Group","Directives")] = directive
+            found = true 
+            break
+          end
+        end
+      end
+    end
+  end
+
+  identity.personalityArmIdle = portrait[1].idle
+  for k,v in ipairs(portrait) do
+    local directory = v.directory
+    if directory:find("malebody") then
+      identity.personalityIdle = v.idle
+      identity.bodyDirectives = v.directive
+    elseif directory:find("emote") then
+      identity.emoteDirectives = v.directive
+    end
+  end
+  return identity
 end
 
 --FUNCTIONS TO REMEMBER--
