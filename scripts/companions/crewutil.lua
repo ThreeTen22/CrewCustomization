@@ -160,6 +160,31 @@ function crewutil.outfitCheck(outfit)
   return hasArmor, hasWeapons, emptyHands
 end
 
+
+
+function crewutil.prepareItem(t)
+  if not t then return end
+  if type(t) == "string" then
+    t = {name = t, count = 1}
+  end
+  construct(t, "parameters")
+
+  dLog("Making PCALL - Any Errors shown below can be safely ignored")
+  local success, itemConfig = pcall(root.itemConfig, t.name)
+  if success then
+      local config = itemConfig.config
+      if t.parameters.directives or config.directives then return end
+      if config.colorIndex then 
+        t.parameters.directives = crewutil.buildDirectiveFromIndex(config.colorIndex, config.colorOptions)
+      end
+  end
+end
+
+function crewutil.buildDirectiveFromIndex(indx, colorOptions)
+  if not indx or colorOptions then return {colorIndex = 0}
+  local option = colorOptions[indx]
+end
+
 function crewutil.buildItemOverrideTable(t)
 
   local items = {}
@@ -306,7 +331,7 @@ function crewutil.getPlayerIdentity(portrait)
   identity.name = world.entityName(player.id())
   
   
-  local genderInfo = getAsset(getSpeciesPath(identity.species, ":genders"))
+  local genderInfo = getAsset(getSpeciesPath(identity.species, ":gendrs"))
 
   util.mapWithKeys(portrait, function(k,v)
       local value = v.image:lower()
