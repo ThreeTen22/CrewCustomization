@@ -94,7 +94,8 @@ function dComp.table(input) return dLogJson(input, "table") end
 function dComp.number(input) return dLog(input, "number") end
 function dComp.boolean(input) return dLog(input, "bool: ") end
 function dComp.userdata(input) return dLogJson(input, "userdata:") end
-dComp["thread"] = function(input) return dLog(input) end
+function dComp.thread(input) return dLog(input) end
+
 dComp["nil"] = function(input) return dLog("nil") end
 dComp["function"] = function(input) return sb.logInfo("%s", input) end
 
@@ -107,10 +108,6 @@ end
 function setPathStr(t, str, value)
     if str == "" then t[str] = value return end
     return jsonSetPath(t, str,value)
-end
-
-function toHex(v)
-  return string.format("%02x", math.min(math.floor(v),255))
 end
 
 function toBool(value)
@@ -133,13 +130,16 @@ function logENV()
   end
 end
 
-function crewutil.formatItemBag(itemSlot, itemBag)
+function crewutil.formatItemBag(itemSlot, itemBag, prepareItems)
   dLog("===formatItemBag===")
   local output = {}
   for i,v in pairs(itemBag) do
     if v then
       local key = itemSlot[i] 
       output[key] = {}
+      if prepareItems then
+        v = crewutil.prepareItem(v)
+      end
       table.insert(output[key], v)
     end
   end
@@ -165,28 +165,41 @@ end
 function crewutil.prepareItem(t)
   if not t then return end
   if type(t) == "string" then
+    if t == "" then return t end
     t = {name = t, count = 1}
+  else
+    if t.parameters and t.parameters.directives then return t end
   end
+
   construct(t, "parameters")
 
   dLog("Making PCALL - Any Errors shown below can be safely ignored")
-  local success, itemConfig = pcall(root.itemConfig, t.name)
+  local success, itemType = pcall(root.itemType, t.name)
   if success then
-      local config = itemConfig.config
-      if t.parameters.directives or config.directives then return end
-      if config.colorIndex then 
+    if itemType ~= "activeitem" then
+      local config = root.itemConfig(t.name).config
+      if config.directives then return t end
+      if config.colorIndex or config.colorOptions then 
         t.parameters.directives = crewutil.buildDirectiveFromIndex(config.colorIndex, config.colorOptions)
       end
+    end
+    return t
   end
 end
 
 function crewutil.buildDirectiveFromIndex(indx, colorOptions)
-  if not indx or colorOptions then return {colorIndex = 0}
+  indx = tonumber(indx) or 1
+
   local option = colorOptions[indx]
+  local str = ";%s;%s"
+  local directive = "?replace"
+  for k,v in pairs(option) do
+    directive = directive..str:format(k,v)
+  end
+  return directive
 end
 
 function crewutil.buildItemOverrideTable(t)
-
   local items = {}
   local container = nil
   t = t or {}
@@ -331,7 +344,7 @@ function crewutil.getPlayerIdentity(portrait)
   identity.name = world.entityName(player.id())
   
   
-  local genderInfo = getAsset(getSpeciesPath(identity.species, ":gendrs"))
+  local genderInfo = getAsset(getSpeciesPath(identity.species, ":genders"))
 
   util.mapWithKeys(portrait, function(k,v)
       local value = v.image:lower()

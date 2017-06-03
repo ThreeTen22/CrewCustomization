@@ -33,7 +33,7 @@ function initExtended(args)
 	outfitManager:load("baseOutfit", baseOutfit)
 	local tailor = outfitManager:getTailorInfo()
 	if tailor then
-    	promises:add(world.sendEntityMessage(pane.containerEntityId(), "entityportrait", tailor.uniqueId, "bust"),function(v) paneManager:setTailorPortrait(v) end)
+    	promises:add(world.sendEntityMessage(pane.containerEntityId(), "entityportrait", tailor.uniqueId, "bust"),function(v) paneManager:setPortrait(v, "tailorRect") end)
     	world.sendEntityMessage(pane.containerEntityId(), "blinkcrewmember", tailor.uniqueId, player.id())
 	end
 	
@@ -69,18 +69,17 @@ function updateOutfitPortrait(crewId)
 	parameters.identity = npc.identity
 
 	if selectedOutfit.items then
-		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(crewutil.itemSlots, selectedOutfit.items))
+		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(crewutil.itemSlots, selectedOutfit.items, true))
 	end
 	dLogJson(parameters, "updateOutfitPortrait: parameters", true)
 	local npcPort = root.npcPortrait("full", npc.identity.species, "nakedvillager", 1, 1, parameters)
-	paneManager:setPortrait(npcPort, config.getParameter("portraitNames"))
+	paneManager:setPortrait(npcPort, "portraitRect")
 end
 
 function outfitSelected()
 	if self.clearingList == true then return end
 	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	local data = paneManager:getSelectedListData("outfitList")
-	dLogJson(data, "DATA: ")
 	dCompare("outfitSelected", listPath, data)
 	
 	world.containerTakeAll(pane.containerEntityId())

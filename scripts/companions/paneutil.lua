@@ -43,6 +43,7 @@ function paneManager:setVisible(key, bool)
 end
 
 function paneManager:setPortrait(npcPort, portraits)
+  portraits = config.getParameter(portraits)
   for num = 1, #npcPort do
     widget.setImage(portraits[num], npcPort[num].image)
     widget.setVisible(portraits[num], true)
@@ -51,11 +52,6 @@ function paneManager:setPortrait(npcPort, portraits)
   for num = #npcPort+1, #portraits do
     widget.setVisible(portraits[num], false)
   end
-end
-
-function paneManager:setTailorPortrait(npcPort)
-  local portraits = config.getParameter("tailorPortraitNames")
-  return self:setPortrait(npcPort, portraits)
 end
 
 function paneManager:getListPaths(key)
