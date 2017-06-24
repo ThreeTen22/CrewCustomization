@@ -49,7 +49,6 @@ function updateMain()
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
-	return 
 end
 
 
@@ -107,7 +106,7 @@ function listOutfits(filter)
 	local newItem = widget.addListItem(listPath)
 	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
 	widget.setData(dataPath:format(newItem), "-- NEW --")
-	--dLogClass(outfitManager.baseOutfit, "baseOutfit")
+
 	local sortedTable, keyTable = crewutil.sortedTablesByValue(outfitManager.baseOutfit, "displayName")
 	self.clearingList = false
 	if not (sortedTable and keyTable) then
@@ -124,7 +123,7 @@ function listOutfits(filter)
 				outfitManager:getBaseOutfit(outfitUuid).listItem = newItem
 				widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
 				widget.setData(dataPath:format(newItem), outfitUuid)
-				--widget.registerMemberCallback(listPath, "testCallBack", callbackInfo)
+				
 				dLog(subWidgetPath:format(newItem, "itemSlot"),"subWidgetPath: ")
 				widget.setData(subWidgetPath:format(newItem, "itemSlot"), subWidgetPath:format(newItem, "itemSlot"))
 			end
@@ -189,11 +188,11 @@ end
 function uninit()
 	storage.baseOutfit = {}
 	outfitManager:forEachElementInTable("baseOutfit", function(v)
-	    if v.displayName == "-- CHANGE ME --" and isEmpty(v.items) == false then 
-	    	local name = v.podUuid
-	    	local min = math.random(1,name:len()-10)
-	    	v.displayName = name:sub(min,min+10)
-	    end
+		if v.displayName == "-- CHANGE ME --" and isEmpty(v.items) == false then 
+			local name = v.podUuid
+			local min = math.random(1,name:len()-10)
+			v.displayName = name:sub(min,min+10)
+		end
 		storage.baseOutfit[v.podUuid] = v:toJson()
 	end)
 	storage.crew = nil
@@ -214,4 +213,6 @@ end
 function listSlotSelected(id, data)
 	dLogJson({id, data}, "listSlotSelected")
 	exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data), data)
+	local outfit = outfitManager:getSelectedOutfit()
+	outfit.items = paneManager:batchGetWidgets("outfitItemSlotItems")
 end

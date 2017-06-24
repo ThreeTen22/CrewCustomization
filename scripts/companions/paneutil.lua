@@ -13,21 +13,11 @@ function getSpeciesPath(species, subPath)
     return string.format("/species/%s.species%s",species,subPath)
 end
 
---function getSelectedListData(listPath)
---  local itemId = widget.getListSelected(listPath)
---  if itemId then
---    local fullpath = string.format("%s.%s", listPath, itemId)
---    return widget.getData(fullpath)
---  end
---end
-
-
 --[[
 
 ==  paneManager ==
 
 --]]
-
 function paneManager:init()
   local config = config.getParameter("paneManager")
   local str = "paneManager.%s"
@@ -137,7 +127,6 @@ function refreshManager:update()
       end
     end
   end
-  -- body
 end
 
 --[[
@@ -145,7 +134,6 @@ end
 ==  crewmember ==
 
 --]]
-
 function crewmember.new(...)
   local self = setmetatable({},crewmember)
   self:init(...)
@@ -183,7 +171,6 @@ end
 ==  baseOutfit ==
 
 --]]
-
 function baseOutfit.new(...)
   local self = setmetatable({},baseOutfit)
   self:init(...)
@@ -217,15 +204,13 @@ end
 ==  outfitManager ==
 
 --]]
-
 function outfitManager:init(...)
   local config = config.getParameter("outfitManager")
   for k,v in pairs(config) do
     self[k] = v
   end
-  dLog(self.connectedListName, "outfitManager:")
-  --self.crew = {}
-  --self.baseOutfit = {}
+  --dLog(self.connectedListName, "outfitManager:")
+
   self.playerParameters = nil
 end
 

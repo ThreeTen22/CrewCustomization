@@ -342,8 +342,6 @@ function crewutil.getPlayerIdentity(portrait)
     return {directory = directory, idle = idle, directive = directive}
   end, portrait)
 
-  
-
   for k,v in ipairs(portrait) do
     local found = false
     local directory = v.directory
