@@ -6,7 +6,6 @@ require "/scripts/companions/paneutil.lua"
 
 function init()
 	if not storage then storage = {} end
-	--self.itemBagStorage = widget.itemGridItems("itemGrid")
 	self.itemBagStorage = {}
 	self.clearingList = false
 	paneManager:init()
@@ -47,16 +46,6 @@ function initExtended(args)
 end
 
 function updateMain()
-	--local itemBag = widget.itemGridItems("itemGrid")
-	--if checkForItemChanges(itemBag) then
-	--	local outfit = outfitManager:getSelectedOutfit()
-	--	if outfit then
-	--		outfit.items = itemBag
-	--		refreshManager:queue("updateOutfitPortrait", updateOutfitPortrait)
-	--	end
-	--	
-	--end
-	--self.itemBagStorage = widget.itemGridItems("itemGrid")
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
@@ -182,7 +171,6 @@ function updateOutfitName(id, data)
 end
 
 function deleteOutfit()
-
 	local items = paneManager:batchGetWidgets("outfitItemSlotItems")
 
 	dLogJson(items, "deleteOutfit - ITEMS")
