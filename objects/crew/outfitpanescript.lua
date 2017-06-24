@@ -13,6 +13,8 @@ function init()
 	outfitManager:init()
 	refreshManager:init()
 	
+	widget.registerMemberCallback("outfitScrollArea.outfitList", "listSlotSelected", listSlotSelected)
+
 	outfitManager:loadPlayer(1)
 	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
 	return
@@ -77,13 +79,12 @@ function updateOutfitPortrait(crewId)
 	paneManager:setPortrait(npcPort, "portraitRect")
 end
 
-function outfitSelected()
+function outfitSelected(id, data)
 	if self.clearingList == true then return end
 	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	local data = paneManager:getSelectedListData("outfitList")
 	dCompare("outfitSelected", listPath, data)
 	
-	--world.containerTakeAll(pane.sourceEntity())
 	paneManager:batchSetWidgets("clearOutfitItemSlots")
 	local outfit = outfitManager:getBaseOutfit(data)
 	if not outfit then
@@ -95,19 +96,16 @@ function outfitSelected()
 		else
 			outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
 			newItem = widget.addListItem(listPath)
+			widget.setData(subWidgetPath:format(newItem, "itemSlot"), subWidgetPath:format(newItem, "itemSlot"))
 			outfit.listItem = newItem
 		end
 		widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
 		widget.setData(dataPath:format(newItem), outfit.podUuid)
 		return widget.setListSelected(listPath, newItem)
 	end
+
 	paneManager:batchSetWidgets("outfitRect", outfit)
-	for i = 1, #crewutil.itemSlots do
-		local item = outfit.items[i]
-		if item then
-			widget.setItemSlotItem("")
-		end
-	end
+
 	refreshManager:queue("updateOutfitPortrait", updateOutfitPortrait)
 	return paneManager:setVisible("outfitRect", true)
 end
@@ -138,11 +136,13 @@ function listOutfits(filter)
 				widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
 				widget.setData(dataPath:format(newItem), outfitUuid)
 				--widget.registerMemberCallback(listPath, "testCallBack", callbackInfo)
-				--widget.setData(dataPath:format(subWidgetPath:format(newItem, "itemSlot")), subWidgetPath:format(newItem, "itemSlot"))
+				dLog(subWidgetPath:format(newItem, "itemSlot"),"subWidgetPath: ")
+				widget.setData(subWidgetPath:format(newItem, "itemSlot"), subWidgetPath:format(newItem, "itemSlot"))
 			end
 		else
 			outfitManager.baseOutfit[outfitUuid] = nil
 		end
+
 	end
 end
 
@@ -182,7 +182,9 @@ function updateOutfitName(id, data)
 end
 
 function deleteOutfit()
-	local items = widget.itemGridItems("itemGrid")
+
+	local items = paneManager:batchGetWidgets("outfitItemSlotItems")
+
 	dLogJson(items, "deleteOutfit - ITEMS")
 	for k, v in pairs(items) do
 		if k and v then
@@ -219,4 +221,9 @@ function exchangeSlotItem(heldItem, slotItem, slotPath)
 	dLogJson({heldItem, slotItem, slotPath}, "exchangeSlotItem", true)
 	player.setSwapSlotItem(slotItem)
 	widget.setItemSlotItem(slotPath, heldItem)
+end
+
+function listSlotSelected(id, data)
+	dLogJson({id, data}, "listSlotSelected")
+	exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data), data)
 end

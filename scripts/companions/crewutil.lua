@@ -7,7 +7,7 @@ dComp = {}
 crewutil = {
   weapSlots = {"primary", "alt", "sheathedprimary", "sheathedalt"},
   armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"},
-  itemSlotType =  {"activeitem","activeitem","activeitem","activeitem","headarmor","headarmor","chestarmor","chestarmor","legsarmor","legsarmor","backarmor","backarmor"}
+  itemSlotType =  {"activeitem","activeitem","activeitem","activeitem","headarmor","headarmor","chestarmor","chestarmor","legsarmor","legsarmor","backarmor","backarmor"},
 }
 crewutil.itemSlots = util.mergeLists(crewutil.weapSlots, crewutil.armorSlots)
 
@@ -39,21 +39,6 @@ function dLogJson(input, prefix, clean)
   sb.logInfo("%s", str..info)
 end
 
---function dLogClass(input, prefix, clean)
---  local str = "self.%s - %s"
---  local output = {}
---  for k,v in pairs(input) do
---    if type(k) == "string" then
---      if type(v) == "table" then
---        v = sb.printJson(v, 0)
---      end
---      table.insert(output, str:format(k, v))
---    end
---  end
---
---  return dLogJson(output,prefix, clean)
---  -- body
---end
 
 function dLogClass(t, prefix)
     local tType = type(t)
@@ -163,32 +148,28 @@ end
 
 
 function crewutil.prepareItem(t)
-  if not t then return end
   if type(t) == "string" then
-    if t == "" then return t end
     t = {name = t, count = 1}
-  else
-    if t.parameters and t.parameters.directives then return t end
   end
-
-  construct(t, "parameters")
-
-  dLog("Making PCALL - Any Errors shown below can be safely ignored")
-  local success, itemType = pcall(root.itemType, t.name)
-  if success then
-    if itemType ~= "activeitem" then
-      local config = root.itemConfig(t.name).config
-      if config.directives then return t end
-      if config.colorIndex or config.colorOptions then 
-        t.parameters.directives = crewutil.buildDirectiveFromIndex(config.colorIndex, config.colorOptions)
+  if type(t) == "table" then
+    if t.parameters and t.parameters.directives then return t end
+    dLog("Making PCALL - Any Errors shown below can be safely ignored")
+    local success, itemType = pcall(root.itemType, t.name)
+    if success then
+      if itemType ~= "activeitem" then
+        local config = root.itemConfig(t.name).config
+        if not (config.directives and config.directives ~= "") and config.colorOptions then 
+          t.parameters.directives = crewutil.buildDirectiveFromIndex(config.colorIndex, config.colorOptions)
+        end
       end
+      return t
     end
-    return t
   end
 end
 
 function crewutil.buildDirectiveFromIndex(indx, colorOptions)
-  indx = tonumber(indx) or 1
+  
+  indx = (indx and tonumber(indx)) or 1
 
   local option = colorOptions[indx]
   local str = ";%s;%s"

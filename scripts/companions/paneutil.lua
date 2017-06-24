@@ -89,6 +89,19 @@ function paneManager:getSelectedListData(listName)
 end
 
 
+function paneManager:batchGetWidgets(configKey)
+  local widgetNames = self:getConfig("batchGet",configKey, {})
+  local output = {}
+  for k,v in pairs(widgetNames) do
+    if v[2] ~= "table" then
+      output[k] = widget[v[1]](v[2])
+    else
+      output[k] = widget[v[1]](table.unpack(v[2]))
+    end
+  end
+  return output
+end
+
 
 --[[
 
