@@ -73,7 +73,7 @@ function paneManager:batchSetWidgets(configKey, t)
   local widgetNames = self:getConfig("batchSet",configKey, {})
   for k,v in pairs(widgetNames) do
     for i = 1, #v, 2 do
-      widget[v[i]](k, jsonPath(t, v[i+1]))
+      widget[v[i]](k, jsonPathExt(t, v[i+1]))
     end
   end
 end
@@ -87,6 +87,9 @@ function paneManager:getSelectedListData(listName)
     dLog(path, "getSelectedListData")
     return widget.getData(path)
 end
+
+
+
 --[[
 
 ==  refreshManager ==
@@ -294,4 +297,13 @@ function outfitManager:getTailorInfo(podUuid)
     end)
   end
   return tailor
+end
+
+
+function jsonPathExt(t, pathString)
+  if t == nil then
+    return pathString
+  elseif type(pathString) == "string" then
+    return path(t, table.unpack(util.split(pathString, ".")))
+  end
 end

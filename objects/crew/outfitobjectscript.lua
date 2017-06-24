@@ -63,3 +63,8 @@ function blinkInCrewmember(uniqueId, playerId)
 		script.setUpdateDelta(1)
 	end
 end
+
+--function onInteraction(action, data)
+--	return {action, data}
+--	-- body
+--end

@@ -6,14 +6,15 @@ require "/scripts/companions/paneutil.lua"
 
 function init()
 	if not storage then storage = {} end
-	self.itemBagStorage = widget.itemGridItems("itemGrid")
+	--self.itemBagStorage = widget.itemGridItems("itemGrid")
+	self.itemBagStorage = {}
 	self.clearingList = false
 	paneManager:init()
 	outfitManager:init()
 	refreshManager:init()
 	
 	outfitManager:loadPlayer(1)
-	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), initExtended)
+	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
 	return
 end
 
@@ -33,8 +34,8 @@ function initExtended(args)
 	outfitManager:load("baseOutfit", baseOutfit)
 	local tailor = outfitManager:getTailorInfo()
 	if tailor then
-    	promises:add(world.sendEntityMessage(pane.containerEntityId(), "entityportrait", tailor.uniqueId, "bust"),function(v) paneManager:setPortrait(v, "tailorRect") end)
-    	world.sendEntityMessage(pane.containerEntityId(), "blinkcrewmember", tailor.uniqueId, player.id())
+    	promises:add(world.sendEntityMessage(pane.sourceEntity(), "entityportrait", tailor.uniqueId, "bust"),function(v) paneManager:setPortrait(v, "tailorRect") end)
+    	world.sendEntityMessage(pane.sourceEntity(), "blinkcrewmember", tailor.uniqueId, player.id())
 	end
 	
 	listOutfits()
@@ -44,16 +45,16 @@ function initExtended(args)
 end
 
 function updateMain()
-	local itemBag = widget.itemGridItems("itemGrid")
-	if checkForItemChanges(itemBag) then
-		local outfit = outfitManager:getSelectedOutfit()
-		if outfit then
-			outfit.items = itemBag
-			refreshManager:queue("updateOutfitPortrait", updateOutfitPortrait)
-		end
-		
-	end
-	self.itemBagStorage = widget.itemGridItems("itemGrid")
+	--local itemBag = widget.itemGridItems("itemGrid")
+	--if checkForItemChanges(itemBag) then
+	--	local outfit = outfitManager:getSelectedOutfit()
+	--	if outfit then
+	--		outfit.items = itemBag
+	--		refreshManager:queue("updateOutfitPortrait", updateOutfitPortrait)
+	--	end
+	--	
+	--end
+	--self.itemBagStorage = widget.itemGridItems("itemGrid")
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
@@ -82,7 +83,8 @@ function outfitSelected()
 	local data = paneManager:getSelectedListData("outfitList")
 	dCompare("outfitSelected", listPath, data)
 	
-	world.containerTakeAll(pane.containerEntityId())
+	--world.containerTakeAll(pane.sourceEntity())
+	paneManager:batchSetWidgets("clearOutfitItemSlots")
 	local outfit = outfitManager:getBaseOutfit(data)
 	if not outfit then
 		local newItem = nil
@@ -103,7 +105,7 @@ function outfitSelected()
 	for i = 1, #crewutil.itemSlots do
 		local item = outfit.items[i]
 		if item then
-			world.containerItemApply(pane.containerEntityId(), item, i-1)
+			widget.setItemSlotItem("")
 		end
 	end
 	refreshManager:queue("updateOutfitPortrait", updateOutfitPortrait)
@@ -118,7 +120,7 @@ function listOutfits(filter)
 	local newItem = widget.addListItem(listPath)
 	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
 	widget.setData(dataPath:format(newItem), "-- NEW --")
-	dLogClass(outfitManager.baseOutfit, "baseOutfit")
+	--dLogClass(outfitManager.baseOutfit, "baseOutfit")
 	local sortedTable, keyTable = crewutil.sortedTablesByValue(outfitManager.baseOutfit, "displayName")
 	self.clearingList = false
 	if not (sortedTable and keyTable) then
@@ -135,6 +137,8 @@ function listOutfits(filter)
 				outfitManager:getBaseOutfit(outfitUuid).listItem = newItem
 				widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
 				widget.setData(dataPath:format(newItem), outfitUuid)
+				--widget.registerMemberCallback(listPath, "testCallBack", callbackInfo)
+				--widget.setData(dataPath:format(subWidgetPath:format(newItem, "itemSlot")), subWidgetPath:format(newItem, "itemSlot"))
 			end
 		else
 			outfitManager.baseOutfit[outfitUuid] = nil
@@ -147,7 +151,7 @@ function checkForItemChanges(itemBag)
     for i = 1, #crewutil.itemSlots do
       if not compare(self.itemBagStorage[i], itemBag[i]) then
         if itemBag[i] ~= nil and (not inCorrectSlot(i, itemBag[i])) then
-        	world.containerTakeAt(pane.containerEntityId(), i-1)
+        	world.containerTakeAt(pane.sourceEntity(), i-1)
         	player.giveItem(itemBag[i])
         end
         contentsChanged = true
@@ -185,7 +189,7 @@ function deleteOutfit()
 			player.giveItem(v)
 		end
 	end
-	world.containerTakeAll(pane.containerEntityId())
+	paneManager:batchSetWidgets("clearOutfitItemSlots")
 	outfitManager:deleteSelectedOutfit()
 	paneManager:setVisible("outfitRect", false)
 	refreshManager:queue("listOutfits", listOutfits)
@@ -203,5 +207,16 @@ function uninit()
 		storage.baseOutfit[v.podUuid] = v:toJson()
 	end)
 	storage.crew = nil
-	world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.setStorage", storage)
+	world.sendEntityMessage(player.id(), "wardrobeManager.setStorage", storage)
+end
+
+function slotSelected(id, data)
+	dLogJson({id, data}, "slotSelected")
+	exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data), data)
+end
+
+function exchangeSlotItem(heldItem, slotItem, slotPath)
+	dLogJson({heldItem, slotItem, slotPath}, "exchangeSlotItem", true)
+	player.setSwapSlotItem(slotItem)
+	widget.setItemSlotItem(slotPath, heldItem)
 end
