@@ -12,7 +12,7 @@ function init()
 	outfitManager:init()
 	refreshManager:init()
 	
-	widget.registerMemberCallback("outfitScrollArea.outfitList", "listSlotSelected", listSlotSelected)
+	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelected", slotSelected)
 
 	outfitManager:loadPlayer(1)
 	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
@@ -57,18 +57,19 @@ function updateOutfitPortrait(crewId)
 	local selectedOutfit = outfitManager:getSelectedOutfit() or {}
 	local npc = outfitManager.crew[crewId] or outfitManager.crew[player.uniqueId{}]
 	local parameters = {}
-	parameters.identity = npc.identity
-
+	parameters.identity = npc.identity	
 	if selectedOutfit.items then
 		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(crewutil.itemSlots, selectedOutfit.items, true))
 	end
 	dLogJson(parameters, "updateOutfitPortrait: parameters", true)
 	local npcPort = root.npcPortrait("full", npc.identity.species, "nakedvillager", 1, 1, parameters)
 	paneManager:setPortrait(npcPort, "portraitRect")
+	
 end
 
 function outfitSelected(id, data)
 	if self.clearingList == true then return end
+	--[[
 	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	local data = paneManager:getSelectedListData("outfitList")
 	dCompare("outfitSelected", listPath, data)
@@ -90,12 +91,13 @@ function outfitSelected(id, data)
 		widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
 		widget.setData(dataPath:format(newItem), outfit.podUuid)
 		return widget.setListSelected(listPath, newItem)
-	end
-
-	paneManager:batchSetWidgets("outfitRect", outfit)
-
+	end	
+	paneManager:batchSetWidgets("outfitRect", outfit)	
 	refreshManager:queue("updateOutfitPortrait", updateOutfitPortrait)
+
+
 	return paneManager:setVisible("outfitRect", true)
+	--]]
 end
 
 function listOutfits(filter)
@@ -103,6 +105,18 @@ function listOutfits(filter)
 	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	self.clearingList = true
 	widget.clearListItems(listPath)
+	local newItem = widget.addListItem(listPath)
+	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
+	widget.setData(dataPath:format(newItem), "-- NEW --")
+
+	local subPath = nil
+	for k,v in pairs(crewutil.itemSlots) do
+		subPath = listPath.."."..newItem.."."..v
+		dLog(subPath, "subPath")
+		widget.setData(subPath, subPath)
+	end
+
+	--[[
 	local newItem = widget.addListItem(listPath)
 	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
 	widget.setData(dataPath:format(newItem), "-- NEW --")
@@ -126,12 +140,15 @@ function listOutfits(filter)
 				widget.setData(dataPath:format(newItem), outfitUuid)
 				dLog(subWidgetPath:format(newItem, "itemSlot"),"subWidgetPath: ")
 				widget.setData(subWidgetPath:format(newItem, "itemSlot"), subWidgetPath:format(newItem, "itemSlot"))
+				paneManager:setOutfitSlots(outfit.items, outfit)
 			end
 		else
 			outfitManager.baseOutfit[outfitUuid] = nil
 		end
 
 	end
+
+	--]]
 end
 
 function checkForItemChanges(itemBag)
