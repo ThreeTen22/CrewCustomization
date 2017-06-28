@@ -120,10 +120,10 @@ function listOutfits(filter)
 		if outfitName ~= "-- CHANGE ME --" then
 			if outfitUuid and outfit then
 				newItem = widget.addListItem(listPath)
+				outfit.listItem = newItem
 				outfitManager:getBaseOutfit(outfitUuid).listItem = newItem
 				widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
 				widget.setData(dataPath:format(newItem), outfitUuid)
-				
 				dLog(subWidgetPath:format(newItem, "itemSlot"),"subWidgetPath: ")
 				widget.setData(subWidgetPath:format(newItem, "itemSlot"), subWidgetPath:format(newItem, "itemSlot"))
 			end
