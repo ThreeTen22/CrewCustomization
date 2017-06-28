@@ -118,14 +118,14 @@ function listOutfits(filter)
 		
 		widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
 
-		widget.setData(dataPath:format(newItem), outfitUuid)
+		widget.setData(dataPath:format(newItem), podUuid)
 
 		local itemSlotPath = nil
 		for k, v in pairs(crewutil.itemSlots) do
 			itemSlotPath = listPath.."."..newItem.."."..v
 			dLog(itemSlotPath, "itemSlotPath")
 			widget.setData(itemSlotPath, itemSlotPath)
-			widget.setItemSlotItem(itemSlotPath, baseOutfit[v])
+			widget.setItemSlotItem(itemSlotPath, baseOutfit.items[v])
 		end
 
 	end
@@ -232,19 +232,18 @@ function uninit()
 end
 
 function slotSelected(id, data)
-	dLogJson({id, data}, "slotSelected")
+	dLogJson({id, data}, "listSlotSelected")
 	exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data), data)
+
+	local listId = data:match("%.(%d+)%.")
+	local outfitId = widget.getData("outfitScrollArea.outfitList."..listId)
+	dLog(outfitId, "podUuid ")
+	local outfit = outfitManager:getBaseOutfit(outfitId)
+	outfit.items[id] = widget.itemSlotItem(data)
 end
 
 function exchangeSlotItem(heldItem, slotItem, slotPath)
 	dLogJson({heldItem, slotItem, slotPath}, "exchangeSlotItem", true)
 	player.setSwapSlotItem(slotItem)
 	widget.setItemSlotItem(slotPath, heldItem)
-end
-
-function listSlotSelected(id, data)
-	dLogJson({id, data}, "listSlotSelected")
-	exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data), data)
-	local outfit = outfitManager:getSelectedOutfit()
-	outfit.items = paneManager:batchGetWidgets("outfitItemSlotItems")
 end
