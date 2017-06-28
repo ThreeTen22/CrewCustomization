@@ -100,21 +100,36 @@ function outfitSelected(id, data)
 	--]]
 end
 
+function newOutfit(id, data)
+	outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
+	outfit.displayName = outfit.podUuid:sub(1, 6)
+	return refreshManager:queue("listOutfits", listOutfits)
+end
+
 function listOutfits(filter)
 	local index = 2
 	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	self.clearingList = true
 	widget.clearListItems(listPath)
-	local newItem = widget.addListItem(listPath)
-	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
-	widget.setData(dataPath:format(newItem), "-- NEW --")
+	for podUuid, baseOutfit in pairs(outfitManager.baseOutfit) do
+		local newItem = widget.addListItem(listPath)
 
-	local subPath = nil
-	for k,v in pairs(crewutil.itemSlots) do
-		subPath = listPath.."."..newItem.."."..v
-		dLog(subPath, "subPath")
-		widget.setData(subPath, subPath)
+		baseOutfit.listItem = newItem
+		
+		widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
+
+		widget.setData(dataPath:format(newItem), outfitUuid)
+
+		local itemSlotPath = nil
+		for k, v in pairs(crewutil.itemSlots) do
+			itemSlotPath = listPath.."."..newItem.."."..v
+			dLog(itemSlotPath, "itemSlotPath")
+			widget.setData(itemSlotPath, itemSlotPath)
+			widget.setItemSlotItem(itemSlotPath, baseOutfit[v])
+		end
+
 	end
+	--Setup ItemSlot
 
 	--[[
 	local newItem = widget.addListItem(listPath)
