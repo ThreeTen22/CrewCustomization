@@ -240,7 +240,12 @@ function slotSelected(id, data)
 	dLog(outfitId, "podUuid ")
 	local outfit = outfitManager:getBaseOutfit(outfitId)
 	outfit.items[id] = widget.itemSlotItem(data)
+
+	updatePortraitItem("outfitScrollArea.outfitList."..listId, outfit)
+
 end
+
+funciton updatePortraitItem()
 
 function exchangeSlotItem(heldItem, slotItem, slotPath)
 	dLogJson({heldItem, slotItem, slotPath}, "exchangeSlotItem", true)
