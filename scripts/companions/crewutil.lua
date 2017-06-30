@@ -115,17 +115,16 @@ function logENV()
   end
 end
 
-function crewutil.formatItemBag(itemSlot, itemBag, prepareItems)
+function crewutil.formatItemBag(itemBag, prepareItems)
   dLog("===formatItemBag===")
   local output = {}
-  for i,v in pairs(itemBag) do
+  for k,v in pairs(itemBag) do
     if v then
-      local key = itemSlot[i] 
-      output[key] = {}
+      output[k] = {}
       if prepareItems then
         v = crewutil.prepareItem(v)
       end
-      table.insert(output[key], v)
+      table.insert(output[k], v)
     end
   end
   dLogJson(output)
@@ -192,6 +191,9 @@ function crewutil.buildItemOverrideTable(t)
   table.insert(container, {})
   container = items.override[1][2]
   table.insert(container, t)
+  for k,v in pairs(container) then
+    container[k] = {v}
+  end
   return items
 end
 

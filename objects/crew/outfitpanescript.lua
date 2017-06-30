@@ -59,7 +59,7 @@ function updateOutfitPortrait(crewId)
 	local parameters = {}
 	parameters.identity = npc.identity	
 	if selectedOutfit.items then
-		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(crewutil.itemSlots, selectedOutfit.items, true))
+		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(selectedOutfit.items, true))
 	end
 	dLogJson(parameters, "updateOutfitPortrait: parameters", true)
 	local npcPort = root.npcPortrait("full", npc.identity.species, "nakedvillager", 1, 1, parameters)
@@ -241,11 +241,32 @@ function slotSelected(id, data)
 	local outfit = outfitManager:getBaseOutfit(outfitId)
 	outfit.items[id] = widget.itemSlotItem(data)
 
-	updatePortraitItem("outfitScrollArea.outfitList."..listId, outfit)
+	updatePortraitItem(listId, outfit)
 
 end
 
-funciton updatePortraitItem()
+function updateListItemPortrait(listItemId, outfit)
+	
+	local portraitPath = paneManager:getListPaths("outfitPortraitList").."."
+	portraitPath = portraitPath:format(listItemId)
+
+	if not outfit then
+		local _, dataPath, _ = paneManager:getListPaths("outfitList")
+		local outfitUuid = widget.getData(dataPath:format(listItemId))
+		outfit = outfitManager:getBaseOutfit(outfitUuid)
+	end
+
+	local portraitRect = config.getParameter("portraitRect")
+	if not portraitPath:find(".", -1, true) then
+		portraitPath = portraitPath.."."
+	end
+	for i,v in ipairs(portraitRect) do
+		portraitRect[i] == portraitPath..v
+	end
+	local npcPort = outfitManager.crew[player.uniqueId()]:getPortrait("full", crewutil.buildItemOverrideTable(crewutil.formatItemBag(outfit.items, false)))
+	
+	return paneManager:setPortrait(npcPort, portraitRect)
+end
 
 function exchangeSlotItem(heldItem, slotItem, slotPath)
 	dLogJson({heldItem, slotItem, slotPath}, "exchangeSlotItem", true)

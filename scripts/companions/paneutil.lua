@@ -160,8 +160,9 @@ function crewmember:toJson()
   return json
 end
 
-function crewmember:getPortrait(portraitType, naked)
+function crewmember:getPortrait(portraitType, naked, items)
   local parameters = {identity = self.identity}
+  parameters.items = items
 
   return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, parameters)
 end
