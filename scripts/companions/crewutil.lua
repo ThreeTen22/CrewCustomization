@@ -191,8 +191,9 @@ function crewutil.buildItemOverrideTable(t)
   table.insert(container, {})
   container = items.override[1][2]
   table.insert(container, t)
-  for k,v in pairs(container) then
-    container[k] = {v}
+  for k,v in pairs(t) do
+    local itemArray = {}
+    container[k] = table.insert(itemArray, v)
   end
   return items
 end
@@ -330,24 +331,25 @@ function crewutil.getPlayerIdentity(portrait)
   local genderInfo = getAsset(getSpeciesPath(identity.species, ":genders"))
 
   util.mapWithKeys(portrait, function(k,v)
-      local value = v.image:lower()
+    local value = v.image:lower()
 
-      if value:find("malehead.png", 10, true) then
+    if value:find("malehead.png", 10, true) then
       identity.personalityHeadOffset = v.position
     elseif value:find("arm.png",10, true) then
       identity.personalityArmOffset = v.position
     end
 
-      value = value:match("/humanoid/.-/(.-)%?addmask=.*")
-      local directory, idle, directive = value:match("(.+)%.png:(.-)(%?.+)")
-
+    value = value:match("/humanoid/.-/(.-)%?addmask=.*")
+    local directory, idle, directive = value:match("(.+)%.png:(.-)(%?.+)")
     return {directory = directory, idle = idle, directive = directive}
   end, portrait)
 
+
+  local directory, directive, found
   for k,v in ipairs(portrait) do
-    local found = false
-    local directory = v.directory
-    local directive = v.directive
+      found = false
+      directory = v.directory
+      directive = v.directive
     if directory:find("/") then
       local partGroup, partType = directory:match("(.-)/(.+)")
       if partGroup == "hair" then
