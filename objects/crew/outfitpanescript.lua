@@ -78,20 +78,32 @@ function newOutfit(id, data)
 end
 
 function listOutfits(filter)
-	local index = 2
-	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
+	filter = filter or {}
 	self.clearingList = true
 	widget.clearListItems(listPath)
-	for podUuid, baseOutfit in pairs(outfitManager.baseOutfit) do
+	self.clearingList = false
+	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
+
+	local displayIds = util.map(outfitManager.baseOutfit, 
+	    function(outfit, output)  
+	    	if isEmpty(filter) then output = outfit.podUuid end  
+	    	for k,v in pairs(filter) do
+	    		if outfit[k]:find(v,1,true) then
+	    			output = outfit.podUuid
+	    			break
+	    		end
+	    	end
+	    	return output
+	    end)
+
+	for _,podUuid in pairs(displayIds) do
 		local newItem = widget.addListItem(listPath)
 		local data = {}
+		local baseOutfit = outfitManager:getBaseOutfit(podUuid)
 		data.listItemId = newItem
 		data.podUuid = podUuid
-		data.path = dataPath:format(newItem)
-
-		widget.setData(dataPath:format(newItem), data)
-
-		baseOutfit.listItem = newItem
+		data.basePath = itemPath:format(newItem)
+		widget.setData(data.basePath, data)
 		
 		widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
 
@@ -136,7 +148,7 @@ end
 
 
 function updateOutfitName(id, data)
-	local outfitUuid =  data or widget.getData(id)
+	local outfitUuid =  data.podUuid
 	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	local listItem = widget.getListSelected(listPath)
 	local text = widget.getText("tbOutfitName") or "nil"
@@ -178,30 +190,21 @@ function slotSelected(id, data)
 	exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data.path), data.path)
 	paneManager:getBaseOutfit(data.podUuid).items[id] = widget.itemSlotItem(data.path)
 
-	updateListItemPortrait(listId, outfit)
+	updateListItemPortrait(data)
 
 end
 
-function updateListItemPortrait(listItemId, outfit)
-	
-	local portraitPath = paneManager:getListPaths("outfitPortraitList").."."
-	portraitPath = portraitPath:format(listItemId)
+function updateListItemPortrait(data)
+	local _,_, subWidgetPath = paneManager:getListPaths("outfitList")
+	local outfit = outfitManager:getBaseOutfit(data.podUuid)
 
-	if not outfit then
-		local _, dataPath, _ = paneManager:getListPaths("outfitList")
-		local outfitUuid = widget.getData(dataPath:format(listItemId))
-		outfit = outfitManager:getBaseOutfit(outfitUuid)
-	end
-
-	local portraitRect = config.getParameter("portraitRect")
-	if not portraitPath:find(".", -1, true) then
-		portraitPath = portraitPath.."."
-	end
-	for i,v in ipairs(portraitRect) do
-		portraitRect[i] == portraitPath..v
-	end
 	local npcPort = outfitManager.crew[player.uniqueId()]:getPortrait("full", crewutil.buildItemOverrideTable(crewutil.formatItemBag(outfit.items, false)))
 	
+	local portraitRect = config.getParameter("portraitRect")
+	for i,v in ipairs(portraitRect) do
+		portraitRect[i] == data.basePath.."."..portraitRect[i]
+	end
+
 	return paneManager:setPortrait(npcPort, portraitRect)
 end
 

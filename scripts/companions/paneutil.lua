@@ -160,7 +160,7 @@ function crewmember:toJson()
   return json
 end
 
-function crewmember:getPortrait(portraitType, naked, items)
+function crewmember:getPortrait(portraitType, items)
   local parameters = {identity = self.identity}
   parameters.items = items
 
