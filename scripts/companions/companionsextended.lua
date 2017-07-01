@@ -106,6 +106,8 @@ function Wardrobe:init(recruitUuId, storedWardrobe)
   self.outfits = {}
   self:loadOutfits(recruitUuId, storedWardrobe)
   self.outfitMap = self:mapOutfits()
+  dLog("INIT WARDROBE")
+  dLog(self.outfitMap, "outfitMap")
 end
 
 function Wardrobe:loadOutfits(recruitUuId, storedWardrobe)
@@ -200,8 +202,6 @@ function wardrobeManager:init()
     for uuid,_ in pairs(recruitSpawner.shipCrew) do
       self.wardrobes[uuid] = Wardrobe.new(uuid) 
     end
-  else
-    
   end
   promises:add(wardrobeManager)
 end
@@ -209,6 +209,7 @@ end
 function wardrobeManager:update(dt)
   return false
 end
+
 wardrobeManager.finished = wardrobeManager.update
 
 --first, clean up any residual outfits from crew.
@@ -224,37 +225,52 @@ function wardrobeManager:storeWardrobes()
 end
 
 function wardrobeManager:getOutfit(uuid)
-  return self.wardrobes[uuid]:_getOutfit(self.planetType)
-end
-
-function Recruit:_spawn(position, parameters)
-  local spawnOutfit = wardrobeManager:getOutfit(self.podUuid)
-  if not isEmpty(spawnOutfit) then
-    spawnOutfit:overrideParams(parameters)
+  if self.wardrobes[uuid] then
+    return self.wardrobes[uuid]:_getOutfit(self.planetType)
   end
-  --dLogJson(parameters, "Recruit: Spawn: ", true)
-  return world.spawnNpc(position, self.spawnConfig.species,  self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
 end
 
 --Essentially the vanilla spawn parameters, gutted some parameter sets due to irrelevency
-function Recruit:createVariant()
+function Recruit:prepareSpawnParameters()
   local parameters = {}
   util.mergeTable(parameters, self.spawnConfig.parameters)
-
   local scriptConfig = self:_scriptConfig(parameters)
   parameters.persistent = self.persistent
-
   scriptConfig.initialStatus = copy(self.status) or {}
   scriptConfig.initialStorage = util.mergeTable(scriptConfig.initialStorage or {}, self.storage or {})
 
-  local variant = self:_createVariant(parameters)
-  return variant
+  local spawnOutfit = wardrobeManager:getOutfit(self.podUuid)
+  if spawnOutfit and (not isEmpty(spawnOutfit)) then
+    spawnOutfit:overrideParams(parameters)
+  end
+  return parameters
+end
 
+function Recruit:_spawn(position, parameters)
+  local parameters = self:prepareSpawnParameters()
+  return world.spawnNpc(position, self.spawnConfig.species,  self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
+end
+
+function Recruit:createVariant()
+  local parameters = self:prepareSpawnParameters()
+  return root.npcVariant(self.spawnConfig.species, self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
 end
 
 
-function Recruit:_createVariant(parameters)
-  return root.npcVariant(self.spawnConfig.species, self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
+
+function Recruit:createPortrait(portraitType)
+  local parameters = self:prepareSpawnParameters()
+  return root.npcPortrait(portraitType, self.spawnConfig.species, self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
+end
+
+
+--MODIFIED FROM scripts/companions/player.lua
+---Intercepting in order to show outfit management GUI, without needing to directly modify the tailor in any capacity.
+
+function offerUniformUpdate(recruitUuid, entityId)
+  local recruit = recruitSpawner:getRecruit(recruitUuid)
+  if not recruit then return end
+  player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
 end
 
 

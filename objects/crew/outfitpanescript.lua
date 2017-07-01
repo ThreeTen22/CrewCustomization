@@ -36,8 +36,9 @@ function initExtended(args)
 	outfitManager:load("baseOutfit", baseOutfit)
 	local tailor = outfitManager:getTailorInfo()
 	if tailor then
-    	promises:add(world.sendEntityMessage(pane.sourceEntity(), "entityportrait", tailor.uniqueId, "bust"),function(v) paneManager:setPortrait(v, config.getParameter("tailorRect")) end)
-    	world.sendEntityMessage(pane.sourceEntity(), "blinkcrewmember", tailor.uniqueId, player.id())
+		paneManager:setPortrait(tailor:getPortrait("bust"), config.getParameter("tailorRect"))
+    	--promises:add(world.sendEntityMessage(pane.sourceEntity(), "entityportrait", tailor.uniqueId, "bust"),function(v) ) end)
+    	--world.sendEntityMessage(pane.sourceEntity(), "blinkcrewmember", tailor.uniqueId, player.id())
 	end
 	
 	listOutfits()
@@ -50,23 +51,6 @@ function updateMain()
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
-end
-
-
-function updateOutfitPortrait(crewId)
-	crewId = crewId or player.uniqueId()
-	local selectedOutfit = outfitManager:getSelectedOutfit() or {}
-	local npc = outfitManager.crew[crewId] or outfitManager.crew[player.uniqueId{}]
-	local parameters = {}
-	parameters.identity = npc.identity	
-	if selectedOutfit.items then
-		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(selectedOutfit.items, true))
-	end
-	dLogJson(parameters, "updateOutfitPortrait: parameters", true)
-	local npcPort = root.npcPortrait("full", npc.identity.species, "nakedvillager", 1, 1, parameters)
-	
-	paneManager:setPortrait(npcPort, config.getParameter("portraitRect"))
-	
 end
 
 function outfitSelected(id, data)
@@ -108,6 +92,7 @@ function listOutfits(filter)
 		widget.setData(data.basePath, data)
 		
 		widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
+
 
 		
 
@@ -224,69 +209,3 @@ function exchangeSlotItem(heldItem, slotItem, slotPath)
 	player.setSwapSlotItem(slotItem)
 	widget.setItemSlotItem(slotPath, heldItem)
 end
-
-	--Setup ItemSlot
-
-	--[[
-	local newItem = widget.addListItem(listPath)
-	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
-	widget.setData(dataPath:format(newItem), "-- NEW --")
-
-	local sortedTable, keyTable = crewutil.sortedTablesByValue(outfitManager.baseOutfit, "displayName")
-	self.clearingList = false
-	if not (sortedTable and keyTable) then
-	 	dCompare("nil sortedTable or keyTable", sortedTable, keyTable)
-	 	return 
-	end
-	for i, outfitName in ipairs(sortedTable) do
-		local outfitUuid = keyTable[outfitName]
-		local outfit = outfitManager:getBaseOutfit(outfitUuid)
-
-		if outfitName ~= "-- CHANGE ME --" then
-			if outfitUuid and outfit then
-				newItem = widget.addListItem(listPath)
-				outfit.listItem = newItem
-				outfitManager:getBaseOutfit(outfitUuid).listItem = newItem
-				widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
-				widget.setData(dataPath:format(newItem), outfitUuid)
-				dLog(subWidgetPath:format(newItem, "itemSlot"),"subWidgetPath: ")
-				widget.setData(subWidgetPath:format(newItem, "itemSlot"), subWidgetPath:format(newItem, "itemSlot"))
-				paneManager:setOutfitSlots(outfit.items, outfit)
-			end
-		else
-			outfitManager.baseOutfit[outfitUuid] = nil
-		end
-
-	end
-
-	--]]
-
-		--[[
-	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
-	local data = paneManager:getSelectedListData("outfitList")
-	dCompare("outfitSelected", listPath, data)
-	
-	paneManager:batchSetWidgets("clearOutfitItemSlots")
-	local outfit = outfitManager:getBaseOutfit(data)
-	if not outfit then
-		local newItem = nil
-		local hasUnsavedOutfit, outfitUuid = crewutil.subTableElementEqualsValue(outfitManager.baseOutfit, "displayName", "-- CHANGE ME --", "podUuid")
-		if hasUnsavedOutfit then
-			outfit = outfitManager:getBaseOutfit(outfitUuid)
-			newItem = outfit.listItem
-		else
-			outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
-			newItem = widget.addListItem(listPath)
-			widget.setData(subWidgetPath:format(newItem, "itemSlot"), subWidgetPath:format(newItem, "itemSlot"))
-			outfit.listItem = newItem
-		end
-		widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
-		widget.setData(dataPath:format(newItem), outfit.podUuid)
-		return widget.setListSelected(listPath, newItem)
-	end	
-	paneManager:batchSetWidgets("outfitRect", outfit)	
-	refreshManager:queue("updateOutfitPortrait", updateOutfitPortrait)
-
-
-	return paneManager:setVisible("outfitRect", true)
-	--]]
