@@ -13,6 +13,7 @@ function init()
 	refreshManager:init()
 	
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelected", slotSelected)
+	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelectedRight", slotSelectedRight)
 
 	outfitManager:loadPlayer(1)
 	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
@@ -35,12 +36,12 @@ function initExtended(args)
 	outfitManager:load("baseOutfit", baseOutfit)
 	local tailor = outfitManager:getTailorInfo()
 	if tailor then
-    	promises:add(world.sendEntityMessage(pane.sourceEntity(), "entityportrait", tailor.uniqueId, "bust"),function(v) paneManager:setPortrait(v, "tailorRect") end)
+    	promises:add(world.sendEntityMessage(pane.sourceEntity(), "entityportrait", tailor.uniqueId, "bust"),function(v) paneManager:setPortrait(v, config.getParameter("tailorRect")) end)
     	world.sendEntityMessage(pane.sourceEntity(), "blinkcrewmember", tailor.uniqueId, player.id())
 	end
 	
 	listOutfits()
-	updateOutfitPortrait()
+	--updateOutfitPortrait()
 
 	update = updateMain
 end
@@ -63,7 +64,8 @@ function updateOutfitPortrait(crewId)
 	end
 	dLogJson(parameters, "updateOutfitPortrait: parameters", true)
 	local npcPort = root.npcPortrait("full", npc.identity.species, "nakedvillager", 1, 1, parameters)
-	paneManager:setPortrait(npcPort, "portraitRect")
+	
+	paneManager:setPortrait(npcPort, config.getParameter("portraitRect"))
 	
 end
 
@@ -79,10 +81,10 @@ end
 
 function listOutfits(filter)
 	filter = filter or {}
+	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	self.clearingList = true
 	widget.clearListItems(listPath)
 	self.clearingList = false
-	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
 
 	local displayIds = util.map(outfitManager.baseOutfit, 
 	    function(outfit, output)  
@@ -115,6 +117,7 @@ function listOutfits(filter)
 			dLogJson(data, "itemSlotData")
 			widget.setData(data.path, data)
 			widget.setItemSlotItem(data.path, baseOutfit.items[v])
+			updateListItemPortrait(data)
 		end
 
 	end
@@ -188,10 +191,17 @@ end
 
 function slotSelected(id, data)
 	exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data.path), data.path)
-	paneManager:getBaseOutfit(data.podUuid).items[id] = widget.itemSlotItem(data.path)
+	outfitManager:getBaseOutfit(data.podUuid).items[id] = widget.itemSlotItem(data.path)
 
 	updateListItemPortrait(data)
 
+end
+
+function slotSelectedRight(id,data)
+	player.giveItem(widget.itemSlotItem(data.path))
+	widget.setItemSlotItem(data.path, nil)
+	outfitManager:getBaseOutfit(data.podUuid).items[id] = widget.itemSlotItem(data.path)
+	updateListItemPortrait(data)
 end
 
 function updateListItemPortrait(data)
@@ -202,9 +212,10 @@ function updateListItemPortrait(data)
 	
 	local portraitRect = config.getParameter("portraitRect")
 	for i,v in ipairs(portraitRect) do
-		portraitRect[i] == data.basePath.."."..portraitRect[i]
+		portraitRect[i] = data.basePath.."."..v
 	end
-
+	dLogJson(npcPort, "npcPort")
+	dLogJson(portraitRect, "updateListItemPortrait")
 	return paneManager:setPortrait(npcPort, portraitRect)
 end
 

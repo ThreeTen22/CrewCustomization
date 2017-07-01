@@ -33,7 +33,6 @@ function paneManager:setVisible(key, bool)
 end
 
 function paneManager:setPortrait(npcPort, portraits)
-  portraits = config.getParameter(portraits)
   for num = 1, #npcPort do
     widget.setImage(portraits[num], npcPort[num].image)
     widget.setVisible(portraits[num], true)
