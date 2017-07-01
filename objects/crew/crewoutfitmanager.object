@@ -10,8 +10,9 @@
   "category" : "Outfit Storage",
   "tooltipKind" : "object",
   "genericDescription" : "It's a thing that does stuff.",
-  "objectType" : "container",
-  "slotCount" : 12,
+  "objectType" : "object",
+  "interactAction": "ScriptPane",
+  "interactData" : "/objects/crew/outfitpane.config",
   "openSounds" : ["/sfx/objects/miningchest_open.ogg"],
   "frameCooldown" : 5,
   "autoCloseCooldown" : 3600,
@@ -19,7 +20,6 @@
   "scriptDelta" : 0,
   "smashOnBreak" : false,
   "inventoryIcon" : "backgroundpanel.png?scalenearest=0.5",
-  "isContainer": true,
   "smashable" : false,
   "interactive" : true,
   "orientations" : [
@@ -48,7 +48,6 @@
       "spaceScan" : 0.1,
       "anchors" : [ "background" ]
     }
-  ],
-  "uiConfig" : "/objects/crew/outfitpane.config"
+  ]
 }
 

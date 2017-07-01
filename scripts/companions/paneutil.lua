@@ -13,21 +13,11 @@ function getSpeciesPath(species, subPath)
     return string.format("/species/%s.species%s",species,subPath)
 end
 
---function getSelectedListData(listPath)
---  local itemId = widget.getListSelected(listPath)
---  if itemId then
---    local fullpath = string.format("%s.%s", listPath, itemId)
---    return widget.getData(fullpath)
---  end
---end
-
-
 --[[
 
 ==  paneManager ==
 
 --]]
-
 function paneManager:init()
   local config = config.getParameter("paneManager")
   local str = "paneManager.%s"
@@ -43,7 +33,6 @@ function paneManager:setVisible(key, bool)
 end
 
 function paneManager:setPortrait(npcPort, portraits)
-  portraits = config.getParameter(portraits)
   for num = 1, #npcPort do
     widget.setImage(portraits[num], npcPort[num].image)
     widget.setVisible(portraits[num], true)
@@ -73,7 +62,7 @@ function paneManager:batchSetWidgets(configKey, t)
   local widgetNames = self:getConfig("batchSet",configKey, {})
   for k,v in pairs(widgetNames) do
     for i = 1, #v, 2 do
-      widget[v[i]](k, jsonPath(t, v[i+1]))
+      widget[v[i]](k, jsonPathExt(t, v[i+1]))
     end
   end
 end
@@ -87,6 +76,22 @@ function paneManager:getSelectedListData(listName)
     dLog(path, "getSelectedListData")
     return widget.getData(path)
 end
+
+
+function paneManager:batchGetWidgets(configKey)
+  local widgetNames = self:getConfig("batchGet",configKey, {})
+  local output = {}
+  for k,v in pairs(widgetNames) do
+    if v[2] ~= "table" then
+      output[k] = widget[v[1]](v[2])
+    else
+      output[k] = widget[v[1]](table.unpack(v[2]))
+    end
+  end
+  return output
+end
+
+
 --[[
 
 ==  refreshManager ==
@@ -121,7 +126,6 @@ function refreshManager:update()
       end
     end
   end
-  -- body
 end
 
 --[[
@@ -129,7 +133,6 @@ end
 ==  crewmember ==
 
 --]]
-
 function crewmember.new(...)
   local self = setmetatable({},crewmember)
   self:init(...)
@@ -156,8 +159,9 @@ function crewmember:toJson()
   return json
 end
 
-function crewmember:getPortrait(portraitType, naked)
+function crewmember:getPortrait(portraitType, items)
   local parameters = {identity = self.identity}
+  parameters.items = items
 
   return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, parameters)
 end
@@ -167,7 +171,6 @@ end
 ==  baseOutfit ==
 
 --]]
-
 function baseOutfit.new(...)
   local self = setmetatable({},baseOutfit)
   self:init(...)
@@ -201,15 +204,13 @@ end
 ==  outfitManager ==
 
 --]]
-
 function outfitManager:init(...)
   local config = config.getParameter("outfitManager")
   for k,v in pairs(config) do
     self[k] = v
   end
-  dLog(self.connectedListName, "outfitManager:")
-  --self.crew = {}
-  --self.baseOutfit = {}
+  --dLog(self.connectedListName, "outfitManager:")
+
   self.playerParameters = nil
 end
 
@@ -294,4 +295,13 @@ function outfitManager:getTailorInfo(podUuid)
     end)
   end
   return tailor
+end
+
+
+function jsonPathExt(t, pathString)
+  if t == nil then
+    return pathString
+  elseif type(pathString) == "string" then
+    return path(t, table.unpack(util.split(pathString, ".")))
+  end
 end

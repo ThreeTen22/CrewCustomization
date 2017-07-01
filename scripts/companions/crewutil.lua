@@ -7,7 +7,7 @@ dComp = {}
 crewutil = {
   weapSlots = {"primary", "alt", "sheathedprimary", "sheathedalt"},
   armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"},
-  itemSlotType =  {"activeitem","activeitem","activeitem","activeitem","headarmor","headarmor","chestarmor","chestarmor","legsarmor","legsarmor","backarmor","backarmor"}
+  itemSlotType =  {"activeitem","activeitem","activeitem","activeitem","headarmor","headarmor","chestarmor","chestarmor","legsarmor","legsarmor","backarmor","backarmor"},
 }
 crewutil.itemSlots = util.mergeLists(crewutil.weapSlots, crewutil.armorSlots)
 
@@ -39,21 +39,6 @@ function dLogJson(input, prefix, clean)
   sb.logInfo("%s", str..info)
 end
 
---function dLogClass(input, prefix, clean)
---  local str = "self.%s - %s"
---  local output = {}
---  for k,v in pairs(input) do
---    if type(k) == "string" then
---      if type(v) == "table" then
---        v = sb.printJson(v, 0)
---      end
---      table.insert(output, str:format(k, v))
---    end
---  end
---
---  return dLogJson(output,prefix, clean)
---  -- body
---end
 
 function dLogClass(t, prefix)
     local tType = type(t)
@@ -130,17 +115,16 @@ function logENV()
   end
 end
 
-function crewutil.formatItemBag(itemSlot, itemBag, prepareItems)
+function crewutil.formatItemBag(itemBag, prepareItems)
   dLog("===formatItemBag===")
   local output = {}
-  for i,v in pairs(itemBag) do
+  for k,v in pairs(itemBag) do
     if v then
-      local key = itemSlot[i] 
-      output[key] = {}
+      output[k] = {}
       if prepareItems then
         v = crewutil.prepareItem(v)
       end
-      table.insert(output[key], v)
+      table.insert(output[k], v)
     end
   end
   dLogJson(output)
@@ -163,32 +147,28 @@ end
 
 
 function crewutil.prepareItem(t)
-  if not t then return end
   if type(t) == "string" then
-    if t == "" then return t end
     t = {name = t, count = 1}
-  else
-    if t.parameters and t.parameters.directives then return t end
   end
-
-  construct(t, "parameters")
-
-  dLog("Making PCALL - Any Errors shown below can be safely ignored")
-  local success, itemType = pcall(root.itemType, t.name)
-  if success then
-    if itemType ~= "activeitem" then
-      local config = root.itemConfig(t.name).config
-      if config.directives then return t end
-      if config.colorIndex or config.colorOptions then 
-        t.parameters.directives = crewutil.buildDirectiveFromIndex(config.colorIndex, config.colorOptions)
+  if type(t) == "table" then
+    if t.parameters and t.parameters.directives then return t end
+    dLog("Making PCALL - Any Errors shown below can be safely ignored")
+    local success, itemType = pcall(root.itemType, t.name)
+    if success then
+      if itemType ~= "activeitem" then
+        local config = root.itemConfig(t.name).config
+        if not (config.directives and config.directives ~= "") and config.colorOptions then 
+          t.parameters.directives = crewutil.buildDirectiveFromIndex(config.colorIndex, config.colorOptions)
+        end
       end
+      return t
     end
-    return t
   end
 end
 
 function crewutil.buildDirectiveFromIndex(indx, colorOptions)
-  indx = tonumber(indx) or 1
+  
+  indx = (indx and tonumber(indx)) or 1
 
   local option = colorOptions[indx]
   local str = ";%s;%s"
@@ -211,6 +191,10 @@ function crewutil.buildItemOverrideTable(t)
   table.insert(container, {})
   container = items.override[1][2]
   table.insert(container, t)
+  for k,v in pairs(t) do
+    local itemArray = {}
+    container[k] = table.insert(itemArray, v)
+  end
   return items
 end
 
@@ -347,26 +331,25 @@ function crewutil.getPlayerIdentity(portrait)
   local genderInfo = getAsset(getSpeciesPath(identity.species, ":genders"))
 
   util.mapWithKeys(portrait, function(k,v)
-      local value = v.image:lower()
+    local value = v.image:lower()
 
-      if value:find("malehead.png", 10, true) then
+    if value:find("malehead.png", 10, true) then
       identity.personalityHeadOffset = v.position
     elseif value:find("arm.png",10, true) then
       identity.personalityArmOffset = v.position
     end
 
-      value = value:match("/humanoid/.-/(.-)%?addmask=.*")
-      local directory, idle, directive = value:match("(.+)%.png:(.-)(%?.+)")
-
+    value = value:match("/humanoid/.-/(.-)%?addmask=.*")
+    local directory, idle, directive = value:match("(.+)%.png:(.-)(%?.+)")
     return {directory = directory, idle = idle, directive = directive}
   end, portrait)
 
-  
 
+  local directory, directive, found
   for k,v in ipairs(portrait) do
-    local found = false
-    local directory = v.directory
-    local directive = v.directive
+      found = false
+      directory = v.directory
+      directive = v.directive
     if directory:find("/") then
       local partGroup, partType = directory:match("(.-)/(.+)")
       if partGroup == "hair" then
