@@ -41,28 +41,28 @@ end
 
 
 function dLogClass(t, prefix)
-		local tType = type(t)
-		if tType == "function" then
-				dLog(string.format("%s (%s)",prefix,"func"))
-		elseif tType == "table" then
-				if isEmpty(t) == false then
-						for k,v in pairs(t) do
-								if not prefix:find("_index") then
-										dLogClass(v, string.format("%s.%s",prefix, k))
-								else
-										dLogClass(k, string.format("%s",prefix))
-								end
-						end
+	local tType = type(t)
+	if tType == "function" then
+			dLog(string.format("%s (%s)",prefix,"func"))
+	elseif tType == "table" then
+		if isEmpty(t) == false then
+			for k,v in pairs(t) do
+				if not prefix:find("_index") then
+					dLogClass(v, string.format("%s.%s",prefix, k))
 				else
-						dLog(string.format("%s (%s)", prefix, "empty"))
+					dLogClass(k, string.format("%s",prefix))
 				end
+			end
 		else
-				if tType == "string" then
-						dLog(string.format("%s = \"%s\"",prefix, t))
-				else
-						dLog(string.format("%s = %s",prefix, t))
-				end
+			dLog(string.format("%s (%s)", prefix, "empty"))
 		end
+	else
+		if tType == "string" then
+			dLog(string.format("%s = \"%s\"",prefix, t))
+		else
+			dLog(string.format("%s = %s",prefix, t))
+		end
+	end
 end
 
 
@@ -86,21 +86,21 @@ dComp["function"] = function(input) return sb.logInfo("%s", input) end
 
 
 function getPathStr(t, str)
-		if str == "" then return t end
-		return jsonPath(t,str) or t[str]
+	if str == "" then return t end
+	return jsonPath(t,str) or t[str]
 end
 
 function setPathStr(t, str, value)
-		if str == "" then t[str] = value return end
-		return jsonSetPath(t, str,value)
+	if str == "" then t[str] = value return end
+	return jsonSetPath(t, str,value)
 end
 
 function toBool(value)
-		if value then
-			if value == "true" then return true end
-			if value == "false" then return false end 
-		end
-		return nil
+	if value then
+		if value == "true" then return true end
+		if value == "false" then return false end 
+	end
+	return nil
 end
 
 function logENV()
@@ -200,17 +200,18 @@ end
 
 function crewutil.buildEquipTable(equipArmor, equipWeap)   
 	return {primary = equipWeap,
-						alt = equipWeap,
-						sheathedprimary = equipWeap,
-						sheathedalt = equipWeap,
-						head = equipArmor,
-						headCosmetic = equipArmor,
-						chest = equipArmor,
-						chestCosmetic = equipArmor,
-						legs = equipArmor,
-						legsCosmetic = equipArmor,
-						back = equipArmor,
-						backCosmetic = equipArmor}
+				alt = equipWeap,
+	sheathedprimary = equipWeap,
+		sheathedalt = equipWeap,
+				head = equipArmor,
+		headCosmetic = equipArmor,
+				chest = equipArmor,
+		chestCosmetic = equipArmor,
+				legs = equipArmor,
+		legsCosmetic = equipArmor,
+				back = equipArmor,
+		backCosmetic = equipArmor
+			}
 end
 --IDENTICAL TO THE FUNCTION IN UTIL.lua, OVERWRITTEN HERE TO REMOVE LOGINFO SPAM
 function setPath(t, ...)
