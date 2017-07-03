@@ -1,16 +1,10 @@
 
-outfitManager, baseOutfit, Crewmember, refreshManager, paneManager = {}, {}, {}, {}, {}
-outfitManager.__index = outfitManager
+outfitManager, baseOutfit, Crewmember, wardrobeManager, Outfit, Wardrobe  = {}, {}, {}, {}, {}, {}
+
+
 baseOutfit.__index = baseOutfit
 Crewmember.__index = Crewmember
-
-Outfit = {}
 Outfit.__index = Outfit
-
-
-wardrobeManager = {}
-
-Wardrobe = {}
 Wardrobe.__index = Wardrobe
 
 
@@ -19,6 +13,25 @@ local function setStorageWardrobe(args)
 	for k,v in pairs(args) do
 		storage[k] = v
 	end
+end
+
+local function getStorageWardrobe()
+	dLog("companions:  gettingStorageWardrobe")
+	local baseOutfit = storage.baseOutfit or {}
+	local crew = {}
+	local wardrobes = storage.wardrobes or {}
+	recruitSpawner:forEachCrewMember(
+	function(recruit)
+		local crewmember = {}
+		crewmember.identity = recruit.spawnConfig.parameters.identity
+		crewmember.npcType = recruit.spawnConfig.type
+		crewmember.podUuid = recruit.podUuid
+		crewmember.uniqueId = recruit.uniqueId
+		crewmember.seed = recruit.spawnConfig.seed
+		crew[recruit.podUuid] = crewmember
+	end)
+	local returnValue = {baseOutfit = baseOutfit, crew = crew, wardrobes = wardrobes}
+	return returnValue
 end
 
 function clearStorage(args)
@@ -59,8 +72,6 @@ function Outfit:buildOutfit(recruit)
 	if recruitSpawner then
 		recruit = recruitSpawner:getRecruit(recruit)
 	else
-		dLog(recruit, "recruitID:  ")
-		dLogClass(outfitManager.crew)
 		recruit = outfitManager.crew[recruit]
 	end
 	local items = {}
@@ -70,10 +81,10 @@ function Outfit:buildOutfit(recruit)
 	--dLogClass(recruit, "buildOutfit - recruit")
 	if recruit.createVariant then
 		variant = recruit:createVariant()
-		crewConfig = root.npcConfig(recruit.spawnConfig.type).scriptConfig.crew
+		crewConfig = root.npcConfig(recruit.spawnConfig.type).scriptConfig.crew or {}
 	else
 		variant = recruit:getVariant({})
-		crewConfig = root.npcConfig(recruit.npcType).scriptConfig.crew
+		crewConfig = root.npcConfig(recruit.npcType).scriptConfig.crew or {}
 	end
 	for i, slot in ipairs(crewutil.weapSlots) do
 		if variant.items[slot] then
@@ -81,15 +92,16 @@ function Outfit:buildOutfit(recruit)
 		end
 	end
 	--get starting outfit, building it due to FU not using the items override parameter
-	
-	defaultUniform = crewConfig.defaultUniform
-	colorIndex = crewConfig.role.uniformColorIndex
-	for _,slot in ipairs(crewConfig.uniformSlots) do
-		local item = defaultUniform[slot]
-		if item then
-			items[slot] = crewutil.dyeUniformItem(item, colorIndex)
-		end
-	end 
+	if not isEmpty(crewConfig) then
+		defaultUniform = crewConfig.defaultUniform
+		colorIndex = crewConfig.role.uniformColorIndex
+		for _,slot in ipairs(crewConfig.uniformSlots) do
+			local item = defaultUniform[slot]
+			if item then
+				items[slot] = crewutil.dyeUniformItem(item, colorIndex)
+			end
+		end 
+	end
 	self.hasArmor, self.hasWeapons, self.emptyHands = crewutil.outfitCheck(items)
 	--self.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(items))
 	dLogJson(items, "self.items:",true)
@@ -184,26 +196,6 @@ function Wardrobe:mapOutfits(recruitUuId)
 		end
 	end
 	return outfitMap
-end
-
-local function getStorageWardrobe()
-	dLog("companions:  gettingStorageWardrobe")
-	local baseOutfit = storage.baseOutfit or {}
-	local crew = {}
-	local wardrobes = storage.wardrobes or {}
-	recruitSpawner:forEachCrewMember(
-	function(recruit)
-		local crewmember = {}
-		crewmember.identity = recruit.spawnConfig.parameters.identity
-		crewmember.npcType = recruit.spawnConfig.type
-		crewmember.podUuid = recruit.podUuid
-		crewmember.uniqueId = recruit.uniqueId
-		crewmember.seed = recruit.spawnConfig.seed
-		crew[recruit.podUuid] = crewmember
-	end)
-	local returnValue = {baseOutfit = baseOutfit, crew = crew, wardrobes = wardrobes}
-	dLogJson(returnValue, "GETSTORAGEWARDROBE")
-	return returnValue
 end
 
 
@@ -309,8 +301,7 @@ end
 function Crewmember:getVariant(items)
 	local parameters = {}
 	parameters.identity = self.identity
-
-	return root.npcVariant(self.species, self.npcType, 1, self.seed, parameters)
+	return root.npcVariant(self.identity.species, self.npcType, 1, self.seed, parameters)
 end
 
 --[[
