@@ -178,12 +178,10 @@ function baseOutfit.new(...)
 end
 
 function baseOutfit:init(stored)
-	dLogJson(stored, "baseOutfit:Init: - stored")
-	stored = stored or {}
-	self.items = stored.items or {}
+	stored = stored or config.getParameter("baseOutfit")
+	self.items = stored.items
 	self.podUuid = stored.podUuid or sb.makeUuid()
-	self.displayName = stored.displayName or "-- CLICK ME TO CHANGE TITLE --"
-	self.type = "baseOutfit"
+	self.displayName = stored.displayName
 end
 
 function baseOutfit:toJson()

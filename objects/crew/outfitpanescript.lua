@@ -61,7 +61,12 @@ end
 
 function newOutfit(id, data)
 	outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
-	return refreshManager:queue("listOutfits", listOutfits)
+	local listPath, _, _ = paneManager:getListPaths("outfitList")
+	self.reloadingList = true
+	local newItem = widget.addListItem(listPath)
+	dLog(newItem.podUuid,  "newOutfitPod")
+	setOutfitListItemInfo(newItem, outfit.podUuid)
+	self.reloadingList = false
 end
 
 function listOutfits(filter)
@@ -83,65 +88,63 @@ function listOutfits(filter)
 	end)
 	for _,podUuid in pairs(displayIds) do
 		local newItem = widget.addListItem(listPath)
-		local data = {}
-		local baseOutfit = outfitManager:getBaseOutfit(podUuid)
-		data.listItemId = newItem
-		data.podUuid = podUuid
-		data.basePath = itemPath:format(newItem)
-		widget.setData(data.basePath, data)
-		
-		data.path = subWidgetPath:format(newItem, "title")
-		widget.setText(data.path, baseOutfit.displayName)
-		widget.setData(data.path, data)
-
-		data.path = subWidgetPath:format(newItem, "btnDelete")
-		widget.setData(data.path, data)
-
-		local itemSlotPath = nil
-		for k, v in pairs(crewutil.itemSlots) do
-			data.path = subWidgetPath:format(newItem, "itemSlotRect."..v)
-			widget.setData(data.path, data)
-			widget.setItemSlotItem(data.path, baseOutfit.items[v])
-			updateListItemPortrait(data)
-		end
-
+		setOutfitListItemInfo(newItem, podUuid)
 	end
 	self.reloadingList = false
 end
 
 function inCorrectSlot(index, itemDescription)
-  local success, itemType = pcall(root.itemType, itemDescription.name)
-  if success then 
-    if itemType == crewutil.itemSlotType[index] then
-      return true
-    end
-  end
-  return false
+	local success, itemType = pcall(root.itemType, itemDescription.name)
+	if success then 
+		if itemType == crewutil.itemSlotType[index] then
+			return true
+		end
+	end
+	return false
 end
 
 
-function updateOutfitName(id, data)
-	local outfitUuid =  data.podUuid
-	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("outfitList")
-	local listItem = widget.getListSelected(listPath)
-	local text = widget.getText("tbOutfitName") or "nil"
-		outfitManager:setDisplayName(outfitUuid, text)
-		widget.setText(subWidgetPath:format(listItem, "title"), text)
+function setOutfitListItemInfo(newItem, podUuid)
+	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
+	local data = {}
+	local baseOutfit = outfitManager:getBaseOutfit(podUuid)
+	data.listItemId = newItem
+	data.podUuid = podUuid
+	data.listPath = listPath
+	data.itemPath = listPath.."."..newItem
+	data.subWidgetPath = data.itemPath..".%s"
+
+	widget.setData(data.itemPath, data)
+
+	
+	data.path = data.subWidgetPath:format("title")
+	widget.setText(data.path, baseOutfit.displayName)
+
+	widget.setData(data.path, data)
+	data.path = data.subWidgetPath:format("btnDelete")
+	widget.setData(data.path, data)
+	for k, v in pairs(crewutil.itemSlots) do
+		data.path = data.subWidgetPath:format("itemSlotRect."..v)
+		widget.setData(data.path, data)
+		widget.setItemSlotItem(data.path, baseOutfit.items[v])
+		updateListItemPortrait(data)
+	end
 end
 
 function deleteOutfit(id, data)
-	local items = paneManager:batchGetWidgets("outfitItemSlotItems")
-
+	local output = {}
+	for k,v in pairs(outfitManager.baseOutfit) do
+		output[k] = v.podUuid
+	end
+	local items = outfitManager:getBaseOutfit(data.podUuid).items
 	dLogJson(items, "deleteOutfit - ITEMS")
 	for k, v in pairs(items) do
 		if k and v then
 			player.giveItem(v)
 		end
 	end
-	paneManager:batchSetWidgets("clearOutfitItemSlots")
-	outfitManager:deleteSelectedOutfit()
-	paneManager:setVisible("outfitRect", false)
-	refreshManager:queue("listOutfits", listOutfits)
+	outfitManager:deleteOutfit(data.podUuid)
+	return refreshManager:queue("listOutfits", listOutfits)
 end	
 
 
@@ -161,14 +164,12 @@ function slotSelectedRight(id,data)
 end
 
 function updateListItemPortrait(data)
-	local _,_, subWidgetPath = paneManager:getListPaths("outfitList")
 	local outfit = outfitManager:getBaseOutfit(data.podUuid)
-
 	local npcPort = outfitManager.crew[player.uniqueId()]:getPortrait("full", crewutil.buildItemOverrideTable(crewutil.formatItemBag(outfit.items, false)))
 	
 	local portraitRect = config.getParameter("portraitRect")
 	for i,v in ipairs(portraitRect) do
-		portraitRect[i] = data.basePath.."."..v
+		portraitRect[i] = data.subWidgetPath:format(v)
 	end
 	return paneManager:setPortrait(npcPort, portraitRect)
 end
@@ -182,19 +183,24 @@ end
 function setTitle(id, data)
 	if not self.reloadingList then
 		local text = widget.getText(data.path)
+		local default = config.getParameter("baseOutfit.displayName")
+		local otherDefault = default:sub(1, -2)
+		text = gMatchPlain(text, default, "")
+		text = gMatchPlain(text, otherDefault, "")
+		widget.setText(data.path, text)
 		outfitManager:setDisplayName(data.podUuid, text)
 	end
-
 end
 
 function uninit()
 	storage.baseOutfit = {}
+	local baseDisplayName = config.getParameter("baseOutfit.displayName")
 	outfitManager:forEachElementInTable("baseOutfit", function(v)
-	    if not isEmpty(v.items) or v.displayName ~= "-- CLICK ME TO CHANGE TITLE --" then
-	    	storage.baseOutfit[v.podUuid] = v:toJson()                              
-			if v.displayName == "-- CLICK ME TO CHANGE TITLE --" then 
+	    if (not isEmpty(v.items) ) or v.displayName ~= baseDisplayName then                          
+			if v.displayName == baseDisplayName or v.displayName == "" then 
 				v.displayName = v.podUuid:sub(1, 6)
 			end
+			storage.baseOutfit[v.podUuid] = v:toJson()   
 		end
 		
 	end)

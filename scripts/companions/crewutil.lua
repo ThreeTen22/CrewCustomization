@@ -115,6 +115,14 @@ function logENV()
 	end
 end
 
+function gMatchPlain(str, substr, repl)
+	local _, e = str:find(substr, 1, true)
+	if e then
+		return repl..str:sub(e+1)
+	end
+	return str
+end
+
 function crewutil.formatItemBag(itemBag, prepareItems)
 	dLog("===formatItemBag===")
 	local output = {}
