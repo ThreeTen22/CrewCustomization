@@ -7,16 +7,18 @@ require "/scripts/companions/paneutil.lua"
 function init()
 	if not storage then storage = {} end
 	self.itemBagStorage = {}
-	self.clearingList = false
+	self.reloadingList = false
 	paneManager:init()
 	outfitManager:init()
 	refreshManager:init()
-	
+
+	widget.registerMemberCallback("outfitScrollArea.outfitList", "setTitle", setTitle)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelected", slotSelected)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelectedRight", slotSelectedRight)
 
 	outfitManager:loadPlayer(1)
 	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
+
 	return
 end
 
@@ -27,7 +29,7 @@ function update(dt)
 end
 
 function initExtended(args)
-	dLogJson("updateInit", args, true)
+	dLogJson(args, "initExtended", true)
 	storage.baseOutfit = args.baseOutfit or {}
 	storage.crew = args.crew or {}
 
@@ -36,7 +38,7 @@ function initExtended(args)
 	outfitManager:load("baseOutfit", baseOutfit)
 	local tailor = outfitManager:getTailorInfo()
 	if tailor then
-		paneManager:setPortrait(tailor:getPortrait("bust"), config.getParameter("tailorRect"))
+		promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getOutfit", tailor.podUuid), function(outfit) paneManager:setPortrait(tailor:getPortrait("bust", outfit.items), config.getParameter("tailorRect")) end)
     	--promises:add(world.sendEntityMessage(pane.sourceEntity(), "entityportrait", tailor.uniqueId, "bust"),function(v) ) end)
     	--world.sendEntityMessage(pane.sourceEntity(), "blinkcrewmember", tailor.uniqueId, player.id())
 	end
@@ -59,16 +61,14 @@ end
 
 function newOutfit(id, data)
 	outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
-	outfit.displayName = outfit.podUuid:sub(1, 6)
 	return refreshManager:queue("listOutfits", listOutfits)
 end
 
 function listOutfits(filter)
 	filter = filter or {}
 	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
-	self.clearingList = true
+	self.reloadingList = true
 	widget.clearListItems(listPath)
-	self.clearingList = false
 
 	local displayIds = util.map(outfitManager.baseOutfit, 
 	    function(outfit, output)  
@@ -91,37 +91,20 @@ function listOutfits(filter)
 		data.basePath = itemPath:format(newItem)
 		widget.setData(data.basePath, data)
 		
-		widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
-
-
-		
+		data.path = subWidgetPath:format(newItem, "title")
+		widget.setText(data.path, baseOutfit.displayName)
+		widget.setData(data.path, data)
 
 		local itemSlotPath = nil
 		for k, v in pairs(crewutil.itemSlots) do
 			data.path = listPath.."."..newItem.."."..v
-			dLogJson(data, "itemSlotData")
 			widget.setData(data.path, data)
 			widget.setItemSlotItem(data.path, baseOutfit.items[v])
 			updateListItemPortrait(data)
 		end
 
 	end
-
-end
-
-function checkForItemChanges(itemBag)
-	local contentsChanged = false
-    for i = 1, #crewutil.itemSlots do
-      if not compare(self.itemBagStorage[i], itemBag[i]) then
-        if itemBag[i] ~= nil and (not inCorrectSlot(i, itemBag[i])) then
-        	world.containerTakeAt(pane.sourceEntity(), i-1)
-        	player.giveItem(itemBag[i])
-        end
-        contentsChanged = true
-        break
-      end
-    end
-    return contentsChanged
+	self.reloadingList = false
 end
 
 function inCorrectSlot(index, itemDescription)
@@ -160,20 +143,6 @@ function deleteOutfit()
 end	
 
 
-function uninit()
-	storage.baseOutfit = {}
-	outfitManager:forEachElementInTable("baseOutfit", function(v)
-		if v.displayName == "-- CHANGE ME --" and isEmpty(v.items) == false then 
-			local name = v.podUuid
-			local min = math.random(1,name:len()-10)
-			v.displayName = name:sub(min,min+10)
-		end
-		storage.baseOutfit[v.podUuid] = v:toJson()
-	end)
-	storage.crew = nil
-	world.sendEntityMessage(player.id(), "wardrobeManager.setStorage", storage)
-end
-
 function slotSelected(id, data)
 	exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data.path), data.path)
 	outfitManager:getBaseOutfit(data.podUuid).items[id] = widget.itemSlotItem(data.path)
@@ -199,8 +168,6 @@ function updateListItemPortrait(data)
 	for i,v in ipairs(portraitRect) do
 		portraitRect[i] = data.basePath.."."..v
 	end
-	dLogJson(npcPort, "npcPort")
-	dLogJson(portraitRect, "updateListItemPortrait")
 	return paneManager:setPortrait(npcPort, portraitRect)
 end
 
@@ -208,4 +175,29 @@ function exchangeSlotItem(heldItem, slotItem, slotPath)
 	dLogJson({heldItem, slotItem, slotPath}, "exchangeSlotItem", true)
 	player.setSwapSlotItem(slotItem)
 	widget.setItemSlotItem(slotPath, heldItem)
+end
+
+function setTitle(id, data)
+	if not self.reloadingList then
+		local text = widget.getText(data.path)
+		outfitManager:setDisplayName(data.podUuid, text)
+	end
+
+end
+
+function uninit()
+	storage.baseOutfit = {}
+	outfitManager:forEachElementInTable("baseOutfit", function(v)
+	    if not isEmpty(v.items) or v.displayName ~= "-- CLICK ME TO CHANGE TITLE --" then
+	    	storage.baseOutfit[v.podUuid] = v:toJson()                              
+			if v.displayName == "-- CLICK ME TO CHANGE TITLE --" then 
+				v.displayName = v.podUuid:sub(1, 6)
+			end
+		end
+		
+	end)
+	storage.crew = nil
+
+	world.sendEntityMessage(player.id(), "wardrobeManager.setStorage", storage)
+    world.sendEntityMessage(pane.sourceEntity(), "recruit.confirmUnfollow")
 end

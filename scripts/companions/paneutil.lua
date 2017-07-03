@@ -178,11 +178,11 @@ function baseOutfit.new(...)
 end
 
 function baseOutfit:init(stored)
+  dLogJson(stored, "baseOutfit:Init: - stored")
   stored = stored or {}
   self.items = stored.items or {}
   self.podUuid = stored.podUuid or sb.makeUuid()
-  self.displayName = stored.displayName or "-- CHANGE ME --"
-  self.listItem = nil
+  self.displayName = stored.displayName or "-- CLICK ME TO CHANGE TITLE --"
   self.type = "baseOutfit"
 end
 
@@ -304,4 +304,8 @@ function jsonPathExt(t, pathString)
   elseif type(pathString) == "string" then
     return path(t, table.unpack(util.split(pathString, ".")))
   end
+end
+
+function onOwnShip()
+  return player.worldId() == player.ownShipWorldId()
 end

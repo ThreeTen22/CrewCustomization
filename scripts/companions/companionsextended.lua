@@ -55,7 +55,6 @@ function Outfit:buildOutfit(recruit)
       items[slot] = crewutil.dyeUniformItem(item, colorIndex)
     end
   end 
-  dLogJson(items, "buildOutfitItems",true)
   self.hasArmor, self.hasWeapons, self.emptyHands = crewutil.outfitCheck(items)
   self.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(items))
   dLogJson(items, "self.items:",true)
@@ -151,13 +150,9 @@ end
 
 local function getStorageWardrobe()
   dLog("companions:  gettingStorageWardrobe")
-  local baseOutfit = {}
+  local baseOutfit = storage.baseOutfit or {}
   local crew = {}
   local playerInfo = storage.playerInfo or {}
-
-  for k,v in pairs(storage.baseOutfit or {}) do
-    baseOutfit[k] = v
-  end
 
   recruitSpawner:forEachCrewMember(function(recruit)
     local crewmember = {}
@@ -185,16 +180,16 @@ local function clearStorage(args)
 end
 
 function wardrobeManager:init()
-  clearStorage({"baseOutfit", "wardrobes"})
+  clearStorage({"baseOutfit"})
   message.setHandler("wardrobeManager.getStorage",localHandler(getStorageWardrobe))
   message.setHandler("wardrobeManager.setStorage",localHandler(setStorageWardrobe))
+  message.setHandler("wardrobeManager.getOutfit", function(_,isLocal,...) if isLocal then return wardrobeManager:getOutfit(...) end; end)
   message.setHandler("debug.clearStorage", localHandler(clearStorage))
   if not storage.wardrobes then storage.wardrobes = {} end
   self.planetTypes = crewutil.getPlanetTypes()
   self.planetType = crewutil.getPlanetType()
 
   if recruitSpawner then
-    dLog("recruitSpawner is a thing")
     self.wardrobes = {}
     for uuid,_ in pairs(recruitSpawner.followers) do
       self.wardrobes[uuid] = Wardrobe.new(uuid) 
@@ -271,6 +266,8 @@ function offerUniformUpdate(recruitUuid, entityId)
   local recruit = recruitSpawner:getRecruit(recruitUuid)
   if not recruit then return end
   player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
+
+  promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow"))
 end
 
 
