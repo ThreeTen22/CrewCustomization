@@ -13,6 +13,7 @@ function init()
 	refreshManager:init()
 
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "setTitle", setTitle)
+	widget.registerMemberCallback("outfitScrollArea.outfitList", "deleteOutfit", deleteOutfit)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelected", slotSelected)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelectedRight", slotSelectedRight)
 
@@ -71,17 +72,16 @@ function listOutfits(filter)
 	widget.clearListItems(listPath)
 
 	local displayIds = util.map(outfitManager.baseOutfit, 
-	    function(outfit, output)  
-	    	if isEmpty(filter) then output = outfit.podUuid end  
-	    	for k,v in pairs(filter) do
-	    		if outfit[k]:find(v,1,true) then
-	    			output = outfit.podUuid
-	    			break
-	    		end
-	    	end
-	    	return output
-	    end)
-
+	function(outfit, output)  
+		if isEmpty(filter) then output = outfit.podUuid end  
+		for k,v in pairs(filter) do
+			if outfit[k]:find(v,1,true) then
+				output = outfit.podUuid
+				break
+			end
+		end
+		return output
+	end)
 	for _,podUuid in pairs(displayIds) do
 		local newItem = widget.addListItem(listPath)
 		local data = {}
@@ -95,9 +95,12 @@ function listOutfits(filter)
 		widget.setText(data.path, baseOutfit.displayName)
 		widget.setData(data.path, data)
 
+		data.path = subWidgetPath:format(newItem, "btnDelete")
+		widget.setData(data.path, data)
+
 		local itemSlotPath = nil
 		for k, v in pairs(crewutil.itemSlots) do
-			data.path = listPath.."."..newItem..".itemSlotRect."..v
+			data.path = subWidgetPath:format(newItem, "itemSlotRect."..v)
 			widget.setData(data.path, data)
 			widget.setItemSlotItem(data.path, baseOutfit.items[v])
 			updateListItemPortrait(data)
@@ -127,7 +130,7 @@ function updateOutfitName(id, data)
 		widget.setText(subWidgetPath:format(listItem, "title"), text)
 end
 
-function deleteOutfit()
+function deleteOutfit(id, data)
 	local items = paneManager:batchGetWidgets("outfitItemSlotItems")
 
 	dLogJson(items, "deleteOutfit - ITEMS")
