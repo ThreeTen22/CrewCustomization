@@ -1,11 +1,12 @@
 require "/scripts/util.lua"
 require "/scripts/interp.lua"
 require "/scripts/messageutil.lua"
+require "/scripts/companions/wardrobeclasses.lua"
 require "/scripts/companions/crewutil.lua"
 require "/scripts/companions/paneutil.lua"
 
 function init()
-	if not storage then storage = {} end
+	storage = {}
 	self.itemBagStorage = {}
 	self.reloadingList = false
 	paneManager:init()
@@ -33,10 +34,13 @@ function initExtended(args)
 	dLogJson(args, "initExtended", true)
 	storage.baseOutfit = args.baseOutfit or {}
 	storage.crew = args.crew or {}
+	dLogJson(storage.crew, "STORAGE CREW")
+	storage.wardrobes = args.wardrobes or {}
 
-	outfitManager:loadPlayer(2)
-	outfitManager:load("crew", crewmember)
+	
+	outfitManager:load("crew", Crewmember)
 	outfitManager:load("baseOutfit", baseOutfit)
+	outfitManager:loadPlayer(2)
 	local tailor = outfitManager:getTailorInfo()
 	if tailor then
 		promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getOutfit", tailor.podUuid), 
@@ -44,7 +48,7 @@ function initExtended(args)
 		    			paneManager:setPortrait(tailor:getPortrait("bust", outfit.items), config.getParameter("tailorRect"))
 		    		end)
 	end
-	
+	wardrobeManager:init()
 	listOutfits()
 	update = updateMain
 end
@@ -153,7 +157,6 @@ function slotSelected(id, data)
 	outfitManager:getBaseOutfit(data.podUuid).items[id] = widget.itemSlotItem(data.path)
 
 	updateListItemPortrait(data)
-
 end
 
 function slotSelectedRight(id,data)

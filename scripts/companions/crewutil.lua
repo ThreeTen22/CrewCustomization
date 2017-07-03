@@ -45,17 +45,17 @@ function dLogClass(t, prefix)
 	if tType == "function" then
 			dLog(string.format("%s (%s)",prefix,"func"))
 	elseif tType == "table" then
-		if isEmpty(t) == false then
-			for k,v in pairs(t) do
-				if not prefix:find("_index") then
-					dLogClass(v, string.format("%s.%s",prefix, k))
-				else
-					dLogClass(k, string.format("%s",prefix))
-				end
-			end
-		else
-			dLog(string.format("%s (%s)", prefix, "empty"))
-		end
+		--if isEmpty(t) == false then
+		--	for k,v in pairs(t) do
+		--		if not prefix:find("_index") or prefix:find(k) then
+		--			dLogClass(v, string.format("%s.%s",prefix, k))
+		--		else
+		--			dLogClass(k, string.format("%s",prefix))
+		--		end
+		--	end
+		--else
+			dLog(string.format("%s (%s)", prefix, "(table or _index)"))
+		
 	else
 		if tType == "string" then
 			dLog(string.format("%s = \"%s\"",prefix, t))
