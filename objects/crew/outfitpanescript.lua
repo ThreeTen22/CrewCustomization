@@ -97,7 +97,7 @@ function listOutfits(filter)
 
 		local itemSlotPath = nil
 		for k, v in pairs(crewutil.itemSlots) do
-			data.path = listPath.."."..newItem.."."..v
+			data.path = listPath.."."..newItem..".itemSlotRect."..v
 			widget.setData(data.path, data)
 			widget.setItemSlotItem(data.path, baseOutfit.items[v])
 			updateListItemPortrait(data)
