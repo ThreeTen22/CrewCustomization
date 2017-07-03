@@ -62,7 +62,7 @@ function paneManager:batchSetWidgets(configKey, t)
 	local widgetNames = self:getConfig("batchSet",configKey, {})
 	for k,v in pairs(widgetNames) do
 		for i = 1, #v, 2 do
-		  widget[v[i]](k, jsonPathExt(t, v[i+1]))
+			widget[v[i]](k, jsonPathExt(t, v[i+1]))
 		end
 	end
 end

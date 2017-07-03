@@ -39,14 +39,13 @@ function initExtended(args)
 	outfitManager:load("baseOutfit", baseOutfit)
 	local tailor = outfitManager:getTailorInfo()
 	if tailor then
-		promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getOutfit", tailor.podUuid), function(outfit) paneManager:setPortrait(tailor:getPortrait("bust", outfit.items), config.getParameter("tailorRect")) end)
-    	--promises:add(world.sendEntityMessage(pane.sourceEntity(), "entityportrait", tailor.uniqueId, "bust"),function(v) ) end)
-    	--world.sendEntityMessage(pane.sourceEntity(), "blinkcrewmember", tailor.uniqueId, player.id())
+		promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getOutfit", tailor.podUuid), 
+		    		function(outfit) 
+		    			paneManager:setPortrait(tailor:getPortrait("bust", outfit.items), config.getParameter("tailorRect"))
+		    		end)
 	end
 	
 	listOutfits()
-	--updateOutfitPortrait()
-
 	update = updateMain
 end
 
