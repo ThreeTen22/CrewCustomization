@@ -124,7 +124,6 @@ function gMatchPlain(str, substr, repl)
 end
 
 function crewutil.formatItemBag(itemBag, prepareItems)
-	dLog("===formatItemBag===")
 	local output = {}
 	for k,v in pairs(itemBag) do
 		if v then

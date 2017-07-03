@@ -103,8 +103,7 @@ function Outfit:buildOutfit(recruit)
 		end 
 	end
 	self.hasArmor, self.hasWeapons, self.emptyHands = crewutil.outfitCheck(items)
-	--self.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(items))
-	dLogJson(items, "self.items:",true)
+	self.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(items))
 	self.planetTypes = {}
 	for k,_ in pairs(wardrobeManager.planetTypes) do
 		self.planetTypes[k] = true
@@ -155,8 +154,6 @@ function Wardrobe:init(recruitUuId, storedWardrobe)
 	self.outfits = {}
 	self:loadOutfits(recruitUuId, storedWardrobe)
 	self.outfitMap = self:mapOutfits()
-	dLog("INIT WARDROBE")
-	dLog(self.outfitMap, "outfitMap")
 end
 
 function Wardrobe:loadOutfits(recruitUuId, storedWardrobe)
@@ -276,7 +273,6 @@ function Crewmember:init(stored)
 	self.portrait = stored.portrait
 	self.uniqueId = stored.uniqueId
 	self.seed = stored.seed
-	dLogJson(self:toJson(), "CREW CREATED", true)
 end
 
 function Crewmember:toJson()
@@ -340,14 +336,12 @@ function outfitManager:init(...)
 	for k,v in pairs(config) do
 		self[k] = v
 	end
-	--dLog(self.connectedListName, "outfitManager:")
 	self.playerParameters = nil
 end
 
 function outfitManager:load(key, class)
 	dLogJson("LOADING OUTFITMANAGER - LOAD")
 	for k,v in pairs(storage[key]) do
-		dLogJson({k = v}, "LOAD "..key)
 		self[key][k] = class.new(v)
 	end
 end
