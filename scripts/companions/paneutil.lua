@@ -19,35 +19,35 @@ end
 
 --]]
 function paneManager:init()
-  local config = config.getParameter("paneManager")
-  local str = "paneManager.%s"
-  for k,v in pairs(config) do
-	self[k] = str:format(k)
-  end
+	local config = config.getParameter("paneManager")
+	local str = "paneManager.%s"
+	for k,v in pairs(config) do
+		self[k] = str:format(k)
+  	end
 end
 
 function paneManager:setVisible(key, bool)
-  for _,v in pairs(self:getConfig("rects",key)) do
-	widget.setVisible(v, bool)
-  end
+	for _,v in pairs(self:getConfig("rects",key)) do
+		widget.setVisible(v, bool)
+	end
 end
 
 function paneManager:setPortrait(npcPort, portraits)
-  for num = 1, #npcPort do
-	widget.setImage(portraits[num], npcPort[num].image)
-	widget.setVisible(portraits[num], true)
-  end
+	for num = 1, #npcPort do
+		widget.setImage(portraits[num], npcPort[num].image)
+		widget.setVisible(portraits[num], true)
+	end
 
-  for num = #npcPort+1, #portraits do
-	widget.setVisible(portraits[num], false)
-  end
+	for num = #npcPort+1, #portraits do
+		widget.setVisible(portraits[num], false)
+	end
 end
 
 function paneManager:getListPaths(key)
-  local path = self:getConfig("listPaths", key, nil)
-  if path then
-	return path, path..".%s", path..".%s.%s"
-  end
+	local path = self:getConfig("listPaths", key, nil)
+	if path then
+		return path, path..".%s", path..".%s.%s"
+	end
 end
 
 function paneManager:getConfig(key, extra, default)
@@ -59,19 +59,19 @@ function paneManager:getConfig(key, extra, default)
 end
 
 function paneManager:batchSetWidgets(configKey, t)
-  local widgetNames = self:getConfig("batchSet",configKey, {})
-  for k,v in pairs(widgetNames) do
-	for i = 1, #v, 2 do
-	  widget[v[i]](k, jsonPathExt(t, v[i+1]))
+	local widgetNames = self:getConfig("batchSet",configKey, {})
+	for k,v in pairs(widgetNames) do
+		for i = 1, #v, 2 do
+		  widget[v[i]](k, jsonPathExt(t, v[i+1]))
+		end
 	end
-  end
 end
 
 function paneManager:getSelectedListData(listName)
 	local path = self:getConfig("listPaths", listName, "")
 	local itemId = widget.getListSelected(path)
 	if itemId then
-	  path = string.format("%s.%s", path, itemId)
+		path = string.format("%s.%s", path, itemId)
 	end
 	dLog(path, "getSelectedListData")
 	return widget.getData(path)
@@ -79,16 +79,16 @@ end
 
 
 function paneManager:batchGetWidgets(configKey)
-  local widgetNames = self:getConfig("batchGet",configKey, {})
-  local output = {}
-  for k,v in pairs(widgetNames) do
-	if v[2] ~= "table" then
-	  output[k] = widget[v[1]](v[2])
-	else
-	  output[k] = widget[v[1]](table.unpack(v[2]))
+	local widgetNames = self:getConfig("batchGet",configKey, {})
+	local output = {}
+	for k,v in pairs(widgetNames) do
+		if v[2] ~= "table" then
+			output[k] = widget[v[1]](v[2])
+		else
+			output[k] = widget[v[1]](table.unpack(v[2]))
+		end
 	end
-  end
-  return output
+	return output
 end
 
 
@@ -98,11 +98,11 @@ end
 
 --]]
 function refreshManager:init()
-  self.updateTable = {}
+	self.updateTable = {}
 end
 
 function refreshManager:notQueued(key)
-  return not self.updateTable[key]
+	return not self.updateTable[key]
 end
 
 function refreshManager:queue(key, func)
@@ -134,9 +134,9 @@ end
 
 --]]
 function crewmember.new(...)
-  local self = setmetatable({},crewmember)
-  self:init(...)
-  return self
+	local self = setmetatable({},crewmember)
+	self:init(...)
+	return self
 end
 
 function crewmember:init(stored)
@@ -160,10 +160,10 @@ function crewmember:toJson()
 end
 
 function crewmember:getPortrait(portraitType, items)
-  local parameters = {identity = self.identity}
-  parameters.items = items
+	local parameters = {identity = self.identity}
+	parameters.items = items
 
-  return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, parameters)
+	return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, parameters)
 end
 
 --[[
@@ -215,10 +215,10 @@ function outfitManager:load(key, class)
 end
 
 function outfitManager:addUnique(key, class, storedValue)
-  local newClass = class.new(storedValue)
-  local uId = newClass.podUuid
-  self[key][uId] = newClass
-  return self[key][uId]
+	local newClass = class.new(storedValue)
+	local uId = newClass.podUuid
+	self[key][uId] = newClass
+	return self[key][uId]
 end
 
 function outfitManager:loadPlayer(step)
