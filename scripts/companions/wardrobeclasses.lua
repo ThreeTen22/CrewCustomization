@@ -300,6 +300,17 @@ function Crewmember:getVariant(items)
 	return root.npcVariant(self.identity.species, self.npcType, 1, self.seed, parameters)
 end
 
+function Crewmember:swapGender()
+	local gender = self.identity.gender or self:getVariant().humanoidIdentity.gender
+	if gender == "female" then 
+		gender = "male"
+	else
+		gender = "female"
+	end
+	self.identity.gender = gender
+	-- body
+end
+
 --[[
 
 ==  baseOutfit ==

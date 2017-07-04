@@ -15,12 +15,41 @@ end
 ==  paneManager ==
 
 --]]
+
+function paneManager:addListItem(listPath)
+	local newItem = widget.addListItem(listPath)
+	table.insert(self.listItems[listPath], newItem)
+	return newItem
+end
+
+function paneManager:getListItemIndex(listPath, itemId)
+	local output
+	for i,v in pairs(self.listItems[listPath]) do
+		if v == itemId then 
+			output = i
+			break
+		end
+	end
+	return output
+end
+
+function paneManager:removeListItem(listPath, itemId)
+	local index = self:getListItemIndex(listPath, itemId)
+	widget.removeListItem(listPath, index-1)
+	table.remove(self.listItems[listPath], index)
+end
+
+function paneManager:clearListItems(listPath)
+	self.listItems[listPath] = {}
+	-- body
+end
+
 function paneManager:init()
 	local config = config.getParameter("paneManager")
-	local str = "paneManager.%s"
 	for k,v in pairs(config) do
-		self[k] = str:format(k)
+		self[k] = v
   	end
+  	dLogJson()
 end
 
 function paneManager:setVisible(key, bool)
@@ -40,53 +69,26 @@ function paneManager:setPortrait(npcPort, portraits)
 	end
 end
 
-function paneManager:getListPaths(key)
-	local path = self:getConfig("listPaths", key, nil)
+function paneManager:getListPaths(key, listId)
+	local path = self.listPaths[key]
 	if path then
+		if listId then
+			return path, path.."."..listId, path.."."..listId..".%s"
+		end
 		return path, path..".%s", path..".%s.%s"
 	end
 end
 
 function paneManager:getConfig(key, extra, default)
-	local path = self[key] or ""
+	local path = "paneManager."..key
 	if extra then
 		path = string.format("%s.%s", path, extra)
 	end
 	return config.getParameter(path, default)
 end
 
-function paneManager:batchSetWidgets(configKey, t)
-	local widgetNames = self:getConfig("batchSet",configKey, {})
-	for k,v in pairs(widgetNames) do
-		for i = 1, #v, 2 do
-			widget[v[i]](k, jsonPathExt(t, v[i+1]))
-		end
-	end
-end
-
-function paneManager:getSelectedListData(listName)
-	local path = self:getConfig("listPaths", listName, "")
-	local itemId = widget.getListSelected(path)
-	if itemId then
-		path = string.format("%s.%s", path, itemId)
-	end
-	dLog(path, "getSelectedListData")
-	return widget.getData(path)
-end
 
 
-function paneManager:batchGetWidgets(configKey)
-	local widgetNames = self:getConfig("batchGet",configKey, {})
-	local output = {}
-	for k,v in pairs(widgetNames) do
-		if v[2] ~= "table" then
-			output[k] = widget[v[1]](v[2])
-		else
-			output[k] = widget[v[1]](table.unpack(v[2]))
-		end
-	end
-	return output
-end
 
 
 --[[
@@ -146,4 +148,9 @@ end
 
 function onOwnShip()
   return player.worldId() == player.ownShipWorldId()
+end
+
+function exchangeSlotItem(heldItem, slotItem, slotPath)
+	player.setSwapSlotItem(slotItem)
+	widget.setItemSlotItem(slotPath, heldItem)
 end

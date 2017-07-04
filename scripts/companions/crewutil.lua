@@ -40,21 +40,27 @@ function dLogJson(input, prefix, clean)
 end
 
 
-function dLogClass(t, prefix)
+function dLogClass(t, prefix, index)
+	index = index or 0
+	local newIndex = index + 1
 	local tType = type(t)
+	if index >= 10 then string.format("%s (%s)", prefix, "lmt") return end
 	if tType == "function" then
 			dLog(string.format("%s (%s)",prefix,"func"))
 	elseif tType == "table" then
-		--if isEmpty(t) == false then
-		--	for k,v in pairs(t) do
-		--		if not prefix:find("_index") or prefix:find(k) then
-		--			dLogClass(v, string.format("%s.%s",prefix, k))
-		--		else
-		--			dLogClass(k, string.format("%s",prefix))
-		--		end
-		--	end
-		--else
-			dLog(string.format("%s (%s)", prefix, "(table or _index)"))
+		if (not isEmpty(t)) and (not prefix:find("__index",1,true)) then
+			for k,v in pairs(t) do
+				if rawget(t, k) == nil and type(t[k]) == "function" then
+					dLogClass(string.format("%s (%s)",prefix.."."..k,"func"))
+				elseif rawget(t, k) == nil then
+				    dLogClass(string.format("%s (%s)",prefix.."."..k,"__index"))
+				else
+				    dLogClass(v, string.format("\"%s\"",prefix.."."..k), newIndex)
+				end
+			end
+		else
+			dLog(string.format("%s (%s)", prefix, "empty"))
+		end
 		
 	else
 		if tType == "string" then
@@ -391,9 +397,47 @@ function crewutil.getPlayerIdentity(portrait)
 			identity.emoteDirectives = v.directive
 		end
 	end
+
+
+	--DEBUG--
+	identity.personalityArmIdle, identity.personalityIdle = "idle.1", "idle.1"
+	identity.personalityArmOffset = {0,0}
+	identity.personalityHeadOffset = {0,0}
+
 	return identity
 end
 
+function crewutil.portraitToMannequin(npcPort)
+	
+	local replaceArray = {}
+
+	replaceArray["malehead"] = "/humanoid/any/dummyhead.png"
+	replaceArray["malebody"] = "/humanoid/any/dummybody.png"
+	replaceArray["backarm"] = "/humanoid/any/dummybackarm.png"
+	replaceArray["frontarm"] = "/humanoid/any/dummyfrontarm.png"
+
+
+	local found = false
+	for i,v in ipairs(npcPort) do
+		if isEmpty(replaceArray) then break end
+		found = false
+		if v.image:find("/humanoid/",1,true) then
+			for k,v2 in pairs(replaceArray) do
+				if v.image:find(k,10, true) then
+					npcPort[i].image = replaceArray[k]
+					found = true
+					replaceArray[k] = nil
+					break
+				end
+			end
+			if not found then
+				npcPort[i].image = ""
+			end
+		end
+	end
+	dLogJson(npcPort, "npcPort", true)
+	return npcPort
+end
 --FUNCTIONS TO REMEMBER--
 --[[
 ============NPC COMBAT BEHAVIOR===========
