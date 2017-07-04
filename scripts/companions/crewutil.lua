@@ -249,6 +249,14 @@ function crewutil.tableHasAnyValue(t1, t2)
 	end
 end
 
+function crewutil.indexOfMatch(t, input)
+	for i,v in ipairs(t) do
+		if v == input then
+			return i
+		end
+	end
+end
+
 function crewutil.getPlanetTypes()
 	local output = {}
 	--local asset = root.assetJson("/interface/cockpit/cockpit.config:planetTypeToDescription") 
@@ -408,16 +416,13 @@ function crewutil.getPlayerIdentity(portrait)
 end
 
 function crewutil.portraitToMannequin(npcPort)
-	
 	local replaceArray = {}
-
+	local found = false
 	replaceArray["malehead"] = "/humanoid/any/dummyhead.png"
 	replaceArray["malebody"] = "/humanoid/any/dummybody.png"
 	replaceArray["backarm"] = "/humanoid/any/dummybackarm.png"
 	replaceArray["frontarm"] = "/humanoid/any/dummyfrontarm.png"
-
-
-	local found = false
+	
 	for i,v in ipairs(npcPort) do
 		if isEmpty(replaceArray) then break end
 		found = false
@@ -435,7 +440,6 @@ function crewutil.portraitToMannequin(npcPort)
 			end
 		end
 	end
-	dLogJson(npcPort, "npcPort", true)
 	return npcPort
 end
 --FUNCTIONS TO REMEMBER--

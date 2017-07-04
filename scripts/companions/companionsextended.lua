@@ -51,7 +51,7 @@ function offerUniformUpdate(recruitUuid, entityId)
 	if not recruit then return end
 	player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
 
-	promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow"))
+	promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow", true))
 end
 
 

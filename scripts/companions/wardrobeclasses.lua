@@ -206,7 +206,6 @@ function wardrobeManager:init()
 	if not storage.wardrobes then storage.wardrobes = {} end
 	self.planetTypes = crewutil.getPlanetTypes()
 	self.planetType = crewutil.getPlanetType()
-	dLog("wardrobeManager - loading-  outside Function")
 	self:load()
 	promises:add(wardrobeManager)
 end

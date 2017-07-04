@@ -66,10 +66,9 @@ end
 
 function newOutfit(id, data)
 	outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
-	local listPath, _, subWidgetPath = paneManager:getListPaths("outfitList")
+	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	self.reloadingList = true
-
-	local newItem = paneManager:addListItem(listPath)
+	
 	setOutfitListItemInfo(newItem, outfit.podUuid)
 	widget.focus(subWidgetPath:format(newItem, "title"))
 	self.reloadingList = false
@@ -83,9 +82,6 @@ function listOutfits(filter)
 	local sortedRefTable = {}
 	local newItem, sortedKeys = "", {}
 
-	
-
-	
 	util.each(outfitManager.baseOutfit, 
 	function(podUuid, outfit, output)  
 		if isEmpty(filter) then output = podUuid end  
@@ -102,21 +98,6 @@ function listOutfits(filter)
 	end)
 	table.sort(sortedKeys, function(i,j) return outfitManager:getBaseOutfit(i).displayName < outfitManager:getBaseOutfit(j).displayName end)
 
-	dLogJson(sortedKeys, "sortedKeysAfter: ")
-	--sortedKeys = util.map(displayIds, 
-	--function(podUuid)
-	--	local outfit = outfitManager:getBaseOutfit(podUuid)
-	--	local uniqueDisplayName = outfit.displayName..podUuid:sub(1,3)
-	--	sortedRefTable[uniqueDisplayName] = podUuid
-	--	return uniqueDisplayName
-	--end)
-	--table.sort(sortedKeys)
-	--dLogJson(displayIds, "sortedKeys: ")
-	--displayIds = {}
-	--for _,v in ipairs(sortedKeys) do
-	--	table.insert(displayIds, sortedRefTable[v])
-	--end
-	--dLogJson(displayIds, "displayIds2: ")
 	paneManager:clearListItems(listPath)
 
 	for _,podUuid in ipairs(sortedKeys) do
@@ -146,7 +127,7 @@ function setOutfitListItemInfo(newItem, podUuid)
 	data.path = data.subWidgetPath:format("btnDelete")
 	widget.setData(data.path, data)
 
-	widget.setText(data.subWidgetPath:format("listNumber"), tostring(paneManager:getListItemIndex(data.listPath, data.listItemId)))
+	widget.setText(data.subWidgetPath:format("listNumber"), paneManager:getListItemIndex(data.listPath, data.listItemId))
 
 	for k, v in pairs(crewutil.itemSlots) do
 		data.path = data.subWidgetPath:format("itemSlotRect."..v)
@@ -174,6 +155,7 @@ end
 
 
 function slotSelected(id, data, doExchange)
+	if player.swapSlotItem() == widget.itemSlotItem(data.path) then return end
 	if doExchange then
 		exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data.path), data.path)
 	else
@@ -181,7 +163,8 @@ function slotSelected(id, data, doExchange)
 		widget.setItemSlotItem(data.path, nil)
 	end
 	outfitManager:getBaseOutfit(data.podUuid).items[id] = widget.itemSlotItem(data.path)
-	updateListItemPortrait(data)
+
+	return refreshManager:queue(data.listItemId, {func = updateListItemPortrait, args = data})
 end
 
 function updateListItemPortrait(data)
@@ -227,5 +210,5 @@ function uninit()
 	storage.crew = nil
 
 	--world.sendEntityMessage(player.id(), "wardrobeManager.setStorage", storage)
-    world.sendEntityMessage(pane.sourceEntity(), "recruit.confirmUnfollow")
+    world.sendEntityMessage(pane.sourceEntity(), "recruit.confirmUnfollow", true)
 end
