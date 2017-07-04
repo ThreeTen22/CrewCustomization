@@ -9,6 +9,7 @@ function init()
 	storage = {}
 	self.itemBagStorage = {}
 	self.reloadingList = false
+	self.outfitListCoroutine = nil
 	paneManager:init()
 	outfitManager:init()
 	refreshManager:init()
@@ -77,7 +78,6 @@ function listOutfits(filter)
 	filter = filter or {}
 	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	self.reloadingList = true
-	widget.clearListItems(listPath)
 
 	local displayIds = util.map(outfitManager.baseOutfit, 
 	function(outfit, output)  
@@ -90,6 +90,8 @@ function listOutfits(filter)
 		end
 		return output
 	end)
+	
+	widget.clearListItems(listPath)
 	for _,podUuid in pairs(displayIds) do
 		local newItem = widget.addListItem(listPath)
 		setOutfitListItemInfo(newItem, podUuid)

@@ -102,24 +102,34 @@ function refreshManager:notQueued(key)
 	return not self.updateTable[key]
 end
 
-function refreshManager:queue(key, func)
-	if self:notQueued(key) then
+function refreshManager:queue(key, func, force)
+	if self:notQueued(key) or force then
 		self.updateTable[key] = func
 	end
+end
+
+function refreshManager:removeQueueItem(key)
+	self.updateTable[key] = "skip"
 end
 
 function refreshManager:update()
 	local updateTable = self.updateTable
 	self.updateTable = {}
-	for _,func in pairs(updateTable) do
+	for k,func in pairs(updateTable) do
 		if type(func) == "function" then
-			func()
+			if func() then
+				self:queue(k, func)
+			end
 		elseif type(func) == "table" then
 			local args = func.args
 			if func.unpack then
-				func.func(table.unpack(args))
+				if func.func(table.unpack(args)) then
+					self:queue(k, func)
+				end
 			else
-				func.func(args)
+				if func.func(args) then
+					self:queue(k, func)
+				end
 			end
 		end
 	end
