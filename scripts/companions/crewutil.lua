@@ -140,7 +140,6 @@ function crewutil.formatItemBag(itemBag, prepareItems)
 			table.insert(output[k], v)
 		end
 	end
-	dLogJson(output)
 	return output
 end
 

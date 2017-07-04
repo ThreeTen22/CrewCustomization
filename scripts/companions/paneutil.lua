@@ -78,7 +78,6 @@ function paneManager:init()
 	for k,v in pairs(config) do
 		self[k] = v
   	end
-  	dLogJson()
 end
 
 function paneManager:setVisible(key, bool)

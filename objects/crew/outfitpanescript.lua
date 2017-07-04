@@ -51,6 +51,7 @@ function initExtended(args)
 	end
 	wardrobeManager:init()
 	listOutfits()
+	listCrewmembers()
 	update = updateMain
 end
 
@@ -74,6 +75,36 @@ function newOutfit(id, data)
 	self.reloadingList = false
 end
 
+function listCrewmembers()
+	self.reloadingList = true
+	local listPath, _, _ = paneManager:getListPaths("wardrobeList")
+	local newItem
+
+	paneManager:clearListItems(listPath)
+	for podUuid, crewmember in pairs(outfitManager.crew) do
+		newItem = paneManager:addListItem(listPath) 
+		setWardrobeListItemPath(newItem, podUuid)
+	end
+	self.reloadingList = false
+end
+
+function setWardrobeListItemPath(newItem, podUuid)
+	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("wardrobeList", newItem)
+	local data = {}
+	local baseOutfit = outfitManager:getBaseOutfit(podUuid)
+	data.listItemId = newItem
+	data.podUuid = podUuid
+	data.listPath = listPath
+	data.itemPath = itemPath
+	data.subWidgetPath = subWidgetPath
+
+	widget.setData(data.itemPath, data)
+
+	data.path = data.subWidgetPath:format("title")
+	widget.setText(data.path, outfitManager:getCrewmember(podUuid).identity.name)
+	widget.setData(data.path, data)
+end
+
 function listOutfits(filter)
 	self.reloadingList = true
 	
@@ -92,14 +123,10 @@ function listOutfits(filter)
 				output = nil
 			end
 		end
-
 		table.insert(sortedKeys, output)
-
 	end)
 	table.sort(sortedKeys, function(i,j) return outfitManager:getBaseOutfit(i).displayName < outfitManager:getBaseOutfit(j).displayName end)
-
 	paneManager:clearListItems(listPath)
-
 	for _,podUuid in ipairs(sortedKeys) do
 		newItem = paneManager:addListItem(listPath)
 		setOutfitListItemInfo(newItem, podUuid)

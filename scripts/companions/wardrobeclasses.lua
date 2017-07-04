@@ -390,6 +390,10 @@ function outfitManager:getBaseOutfit(podUuid)
 	return self.baseOutfit[podUuid]
 end
 
+function outfitManager:getCrewmember(podUuid)
+	return self.crew[podUuid]
+end
+
 function outfitManager:forEachElementInTable(tableName, func)
 	for k,v in pairs(self[tableName]) do
 		if func(v) then
