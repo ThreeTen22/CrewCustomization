@@ -97,6 +97,17 @@ function paneManager:getConfig(key, extra, default)
 end
 
 
+function paneManager:setBaseData(listPath, itemPath, subWidgetPath, podUuid, newItem)
+	local data = {}
+	data.listItemId = newItem
+	data.podUuid = podUuid
+	data.listPath = listPath
+	data.itemPath = itemPath
+	data.subWidgetPath = subWidgetPath
+
+	return data
+end
+
 
 
 

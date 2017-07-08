@@ -19,6 +19,7 @@ function init()
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "deleteOutfit", deleteOutfit)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelected", function(id,data) return slotSelected(id,data, true) end)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelectedRight", function(id,data) return slotSelected(id,data, false) end)
+	widget.registerMemberCallback("wardrobeDetailScrollArea.wardrobeDetailList", "changeOutfit", changeOutfit)
 
 	outfitManager:loadPlayer(1)
 	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
@@ -94,12 +95,8 @@ end
 function setWardrobeListItemData(newItem, podUuid)
 	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("wardrobeList", newItem)
 	local data = {}
-	local baseOutfit = outfitManager:getBaseOutfit(podUuid)
-	data.listItemId = newItem
+
 	data.podUuid = podUuid
-	data.listPath = listPath
-	data.itemPath = itemPath
-	data.subWidgetPath = subWidgetPath
 
 	widget.setData(data.itemPath, data)
 
@@ -107,6 +104,43 @@ function setWardrobeListItemData(newItem, podUuid)
 	widget.setText(data.path, outfitManager:getCrewmember(podUuid).identity.name)
 	widget.setData(data.path, data)
 end
+
+function crewmemberSelected(id, data)
+	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("wardrobeList")
+	data = widget.getData(dataPath:format(paneManager:getListSelected("wardrobeList")))
+
+	self.reloadingList = true
+	
+	
+	listPath, dataPath, subWidgetPath  = paneManager:getListPaths("wardrobeDetailList")
+	paneManager:clearListItems(listPath)
+
+	for planet, outfitKey in pairs(outfitMap) do
+		local newItem = paneManager:addListItem(listPath)
+		wardrobeDetailItemData(data.podUuid, newItem, itemKey)
+	end
+	
+	self.reloadingList = false
+	return paneManager:setVisible("wardrobeRect", true)
+	-- body
+end
+
+function wardrobeDetailItemData(podUuid, newItem, outfitKey)
+		local wardrobe = wardrobeManager.wardrobes[data.podUuid].outfits[outfitKey]
+		local outfitMap = wardrobe.outfitMap
+
+		local data = paneManager:setBaseData(paneManager:getListPaths("wardrobeDetailList", newItem), podUuid, newItem)
+
+		data.outfitKey = outfitKey
+
+		data.path = subWidgetPath:format("title")
+		widget.setText(data.path, crewutil.getCelestialBiomeNames(planet))
+		widget.setData(data.path, data)
+		data.path = subWidgetPath:format("baseOutfitButton")
+		widget.setText(data.path, outfitKey)
+		widget.setData(data.path, data)
+end
+
 
 function listOutfits(filter)
 	self.reloadingList = true
@@ -142,14 +176,8 @@ function listOutfits(filter)
 end
 
 function setOutfitListItemData(newItem, podUuid)
-	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList", newItem)
-	local data = {}
 	local baseOutfit = outfitManager:getBaseOutfit(podUuid)
-	data.listItemId = newItem
-	data.podUuid = podUuid
-	data.listPath = listPath
-	data.itemPath = itemPath
-	data.subWidgetPath = subWidgetPath
+	local data = paneManager:setBaseData(paneManager:getListPaths("outfitList", newItem), podUuid, newItem)
 
 	widget.setData(data.itemPath, data)
 
@@ -168,6 +196,12 @@ function setOutfitListItemData(newItem, podUuid)
 		widget.setItemSlotItem(data.path, baseOutfit.items[v])
 	end
 	return refreshManager:queue(data.listItemId, {func = updateListItemPortrait, args = data})
+end
+
+
+function changeOufit(id, data)
+	local position = widget.getPosition(data.path)
+
 end
 
 function deleteOutfit(id, data)
@@ -228,20 +262,6 @@ function inCorrectSlot(index, itemDescription)
 		end
 	end
 	return false
-end
-
-
-function crewmemberSelected(id, data)
-	local listPath, dataPath, _ = paneManager:getListPaths("wardrobeList")
-	data = widget.getData(dataPath:format(paneManager:getListSelected("wardrobeList")))
-	dLog({id, data},"crewmemberSelected")
-	--paneManager:clearListItems()
-	wardrobeDetailList = paneManager:getListPaths("wardrobeDetailList")
-
-	paneManager:addListItem(wardrobeDetailList)
-	paneManager:addListItem(wardrobeDetailList)
-	return paneManager:setVisible("wardrobeRect", true)
-	-- body
 end
 
 function uninit()

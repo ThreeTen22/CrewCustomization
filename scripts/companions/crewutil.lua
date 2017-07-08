@@ -286,8 +286,13 @@ function crewutil.getFriendlyBiomeName(planetType)
 	return planetType
 end
 
+function crewutil.getCelestialBiomeNames(planetType)
+	local planetTypeNames = getAsset("/interface/cockpit/cockpit.config:planetTypeNames")
+	return planetTypeNames[planetType] or crewutil.getFriendlyBiomeName(planetType)
+end
+
 function getAsset(directory, default)
-	dLog("\n=========== MAKING PCALL ===========\nANY ERROR DISPLAYED WITHIN CAN BE SAFELY IGNORED")
+	dLog("\n=========== MAKING PCALL ===========\n"..directory)
 	local success, asset = pcall(root.assetJson, directory)
 	dLog("\n=========== END PCALL ===========")
 	if success then 
