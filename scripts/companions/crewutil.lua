@@ -7,7 +7,7 @@ dComp = {}
 crewutil = {
 	weapSlots = {"primary", "alt", "sheathedprimary", "sheathedalt"},
 	armorSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"},
-	itemSlotType =  {"activeitem","activeitem","activeitem","activeitem","headarmor","headarmor","chestarmor","chestarmor","legsarmor","legsarmor","backarmor","backarmor"},
+	itemSlotType =  {"activeitem","activeitem","activeitem","activeitem","headarmor","headarmor","chestarmor","chestarmor","legsarmor","legsarmor","backarmor","backarmor"}
 }
 crewutil.itemSlots = util.mergeLists(crewutil.weapSlots, crewutil.armorSlots)
 
@@ -274,7 +274,7 @@ function crewutil.getPlanetTypes()
 end
 
 function crewutil.getFriendlyBiomeName(planetType)
-	paths = {"/biomes/surface/%s.biome:friendlyName", "/biomes/space/%s.biome:friendlyName"}
+	local paths = {"/biomes/surface/%s.biome:friendlyName", "/biomes/space/%s.biome:friendlyName"}
 	local friendlyName, path
 	local foundAsset = false
 	for _,v in ipairs(paths) do
@@ -310,36 +310,6 @@ function crewutil.dyeUniformItem(item, colorIndex)
 	item.parameters.colorIndex = colorIndex
 
 	return item
-end
-
-function crewutil.sortedTablesByValue(t, valueKey)
-	local sortedTable = {}
-	local keyTable = {}
-	for k, v in pairs(t) do
-		local value =  v[valueKey]
-		table.insert(sortedTable, value)
-		keyTable[value] = k
-	end
-	if isEmpty(sortedTable) then return nil, nil end
-		table.sort(sortedTable)
-		dLogJson(sortedTable, "sortedTable\n")
-		dLogJson(keyTable, "keyTable  ", true)
-	return sortedTable, keyTable
-end
-
-function crewutil.subTableElementEqualsValue(t, subTableKey, value, returnKey)
-	for k,v in pairs(t) do
-		if type(v) == "table" and v[subTableKey] then
-			if v[subTableKey] == value then
-				if returnKey then
-					return true, v[returnKey]
-				else
-					return true
-				end
-			end
-		end
-	end
-	return false
 end
 
 function crewutil.getPlayerIdentity(portrait)

@@ -43,32 +43,13 @@ function paneManager:removeListItem(listPath, itemId)
 	table.remove(self.listItems[listPath], index)
 end
 
-function paneManager:swapListItemSlots(listPath, firstItem, secondItem)
-
-	local firstPosition = widget.getPosition(listPath.."."..firstItem)
-	local secondPosition = widget.getPosition(listPath.."."..secondItem)
-	dLogJson(firstPosition, "firstPosition")
-	dLogJson(secondPosition, "secondPosition")
-
-	
-
-	local indexes = {}
-	local value, i 
-	value, indexes[1] = util.find(self.listItems[listPath], function(listId) return listId == firstItem end)
-	value, indexes[2] = util.find(self.listItems[listPath], function(listId) return listId == secondItem end)
-
-	table.sort(indexes)
-	dLogJson(indexes, "INDEXES")
-	table.remove(self.listItems[listPath], indexes[2])
-	table.remove(self.listItems[listPath], indexes[1])
-	table.insert(self.listItems[listPath], indexes[1], secondItem)
-	table.insert(self.listItems[listPath], indexes[2], firstItem)
-
-	widget.setPosition(listPath.."."..secondItem, firstPosition)
-	widget.setPosition(listPath.."."..firstItem, secondPosition)
+function paneManager:getListSelected(key)
+	local listPath = self.listPaths[key]
+	return widget.getListSelected(listPath)
 end
 
 function paneManager:clearListItems(listPath)
+	widget.clearListItems(listPath)
 	self.listItems[listPath] = {}
 	-- body
 end
@@ -81,7 +62,7 @@ function paneManager:init()
 end
 
 function paneManager:setVisible(key, bool)
-	for _,v in pairs(self:getConfig("rects",key)) do
+	for _,v in pairs(self.rects[key] or {}) do
 		widget.setVisible(v, bool)
 	end
 end

@@ -83,12 +83,12 @@ function listCrewmembers()
 	paneManager:clearListItems(listPath)
 	for podUuid, crewmember in pairs(outfitManager.crew) do
 		newItem = paneManager:addListItem(listPath) 
-		setWardrobeListItemPath(newItem, podUuid)
+		setWardrobeListItemInfo(newItem, podUuid)
 	end
 	self.reloadingList = false
 end
 
-function setWardrobeListItemPath(newItem, podUuid)
+function setWardrobeListItemInfo(newItem, podUuid)
 	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("wardrobeList", newItem)
 	local data = {}
 	local baseOutfit = outfitManager:getBaseOutfit(podUuid)
