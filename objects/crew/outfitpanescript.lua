@@ -52,10 +52,14 @@ function initExtended(args)
 	wardrobeManager:init()
 	listOutfits()
 	listCrewmembers()
-	update = updateMain
+
+	paneManager:setVisible("wardrobeRect", false)
+	paneManager:setVisible("baseOutfitRect", true)
+
+	--update = updateMain
 end
 
-function updateMain()
+function updateMain(dt)
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
@@ -66,12 +70,11 @@ function outfitSelected(id, data)
 end
 
 function newOutfit(id, data)
-	outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
-	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
 	self.reloadingList = true
-	
-	setOutfitListItemInfo(newItem, outfit.podUuid)
-	widget.focus(subWidgetPath:format(newItem, "title"))
+	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
+	paneManager:clearListItems(listPath)
+	local outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
+	listOutfits()
 	self.reloadingList = false
 end
 
@@ -80,15 +83,15 @@ function listCrewmembers()
 	local listPath, _, _ = paneManager:getListPaths("wardrobeList")
 	local newItem
 
-	paneManager:clearListItems(listPath)
+	--paneManager:clearListItems(listPath)
 	for podUuid, crewmember in pairs(outfitManager.crew) do
 		newItem = paneManager:addListItem(listPath) 
-		setWardrobeListItemInfo(newItem, podUuid)
+		setWardrobeListItemData(newItem, podUuid)
 	end
 	self.reloadingList = false
 end
 
-function setWardrobeListItemInfo(newItem, podUuid)
+function setWardrobeListItemData(newItem, podUuid)
 	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("wardrobeList", newItem)
 	local data = {}
 	local baseOutfit = outfitManager:getBaseOutfit(podUuid)
@@ -126,15 +129,19 @@ function listOutfits(filter)
 		table.insert(sortedKeys, output)
 	end)
 	table.sort(sortedKeys, function(i,j) return outfitManager:getBaseOutfit(i).displayName < outfitManager:getBaseOutfit(j).displayName end)
-	paneManager:clearListItems(listPath)
+	--paneManager:clearListItems(listPath)
 	for _,podUuid in ipairs(sortedKeys) do
 		newItem = paneManager:addListItem(listPath)
-		setOutfitListItemInfo(newItem, podUuid)
+		setOutfitListItemData(newItem, podUuid)
+		if outfitManager:getBaseOutfit(podUuid).displayName == "" then
+			local itemId = subWidgetPath:format(newItem, "title")
+			refreshManager:queue("setFocus", function() widget.focus(itemId) end, true)
+		end
 	end
 	self.reloadingList = false
 end
 
-function setOutfitListItemInfo(newItem, podUuid)
+function setOutfitListItemData(newItem, podUuid)
 	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList", newItem)
 	local data = {}
 	local baseOutfit = outfitManager:getBaseOutfit(podUuid)
@@ -146,7 +153,6 @@ function setOutfitListItemInfo(newItem, podUuid)
 
 	widget.setData(data.itemPath, data)
 
-	
 	data.path = data.subWidgetPath:format("title")
 	widget.setText(data.path, baseOutfit.displayName)
 	widget.setData(data.path, data)
@@ -176,7 +182,7 @@ function deleteOutfit(id, data)
 		end
 	end
 	outfitManager:deleteOutfit(data.podUuid)
-
+	dLog(data.listItemId, "deletingOutfit: ")
 	return paneManager:removeListItem(data.listPath, data.listItemId)
 end	
 
@@ -222,6 +228,20 @@ function inCorrectSlot(index, itemDescription)
 		end
 	end
 	return false
+end
+
+
+function crewmemberSelected(id, data)
+	local listPath, dataPath, _ = paneManager:getListPaths("wardrobeList")
+	data = widget.getData(dataPath:format(paneManager:getListSelected("wardrobeList")))
+	dLog({id, data},"crewmemberSelected")
+	--paneManager:clearListItems()
+	wardrobeDetailList = paneManager:getListPaths("wardrobeDetailList")
+
+	paneManager:addListItem(wardrobeDetailList)
+	paneManager:addListItem(wardrobeDetailList)
+	return paneManager:setVisible("wardrobeRect", true)
+	-- body
 end
 
 function uninit()

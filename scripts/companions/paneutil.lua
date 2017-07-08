@@ -82,7 +82,7 @@ function paneManager:getListPaths(key, listId)
 	local path = self.listPaths[key]
 	if path then
 		if listId then
-			return path, path.."."..listId, path.."."..listId..".%s"
+			return path, (path.."."..listId), (path.."."..listId..".%s")
 		end
 		return path, path..".%s", path..".%s.%s"
 	end

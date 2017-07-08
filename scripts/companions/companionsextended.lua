@@ -22,7 +22,7 @@ function Recruit:prepareSpawnParameters()
 	end
 	return parameters
 end
-
+	
 
 
 function Recruit:_spawn(position, parameters)
@@ -51,7 +51,7 @@ function offerUniformUpdate(recruitUuid, entityId)
 	if not recruit then return end
 	player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
 
-	promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow", true))
+	promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow", false))
 end
 
 
