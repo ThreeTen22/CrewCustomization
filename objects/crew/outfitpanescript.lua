@@ -53,8 +53,8 @@ function initExtended(args)
 	listOutfits()
 	listCrewmembers()
 
-	paneManager:setVisible("wardrobeRect", false)
-	paneManager:setVisible("baseOutfitRect", true)
+	--paneManager:setVisible("wardrobeRect", false)
+	--paneManager:setVisible("baseOutfitRect", true)
 
 	--update = updateMain
 end
