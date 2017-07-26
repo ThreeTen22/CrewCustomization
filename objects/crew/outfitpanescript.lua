@@ -17,8 +17,6 @@ function init()
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "setTitle", setTitle)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "unfocusWidget", function(id,data) return widget.blur(data.path) end)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "deleteOutfit", deleteOutfit)
-	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelected", function(id,data) return slotSelected(id,data, true) end)
-	widget.registerMemberCallback("outfitScrollArea.outfitList", "slotSelectedRight", function(id,data) return slotSelected(id,data, false) end)
 	widget.registerMemberCallback("wardrobeDetailScrollArea.wardrobeDetailList", "changeOutfit", changeOutfit)
 
 	outfitManager:loadPlayer(1)
