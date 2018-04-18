@@ -17,7 +17,6 @@ function init()
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "setTitle", setTitle)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "unfocusWidget", function(id,data) return widget.blur(data.path) end)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "deleteOutfit", deleteOutfit)
-	widget.registerMemberCallback("wardrobeDetailScrollArea.wardrobeDetailList", "changeOutfit", changeOutfit)
 
 	outfitManager:loadPlayer(1)
 	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
@@ -185,8 +184,8 @@ function setOutfitListItemData(newItem, podUuid)
 
 	data.path = data.subWidgetPath:format("btnDelete")
 	widget.setData(data.path, data)
-
-	widget.setText(data.subWidgetPath:format("listNumber"), paneManager:getListItemIndex(data.listPath, data.listItemId))
+	local text = data.subWidgetPath:format("listNumber"), paneManager:getListItemIndex(data.listPath, data.listItemId);
+	widget.setText()
 
 	for k, v in pairs(crewutil.itemSlots) do
 		data.path = data.subWidgetPath:format("itemSlotRect."..v)
@@ -199,7 +198,7 @@ end
 
 function changeOufit(id, data)
 	local position = widget.getPosition(data.path)
-
+	return true
 end
 
 function deleteOutfit(id, data)
