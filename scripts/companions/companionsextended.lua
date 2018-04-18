@@ -2,22 +2,22 @@
 --I GOT PLANS BABY...I GOT PLANS
 require "/scripts/companions/crewutil.lua"
 
-wardrobeManager = {}
+WardrobeManager = {}
 
-wardrobe = {}
-wardrobe.__index = wardrobe
+Wardrobe = {}
+Wardrobe.__index = Wardrobe
 
 
-outfit = {}
-outfit.__index = outfit
+Outfit = {}
+Outfit.__index = Outfit
 
-function outfit.new(...)
-  local self = setmetatable({}, outfit)
+function Outfit.new(...)
+  local self = setmetatable({}, Outfit)
   self:init(...)
   return self
 end
 
-function outfit:init(recruitUuId,storedOutfit)
+function Outfit:init(recruitUuId,storedOutfit)
   if storedOutfit then
     self.hasArmor = storedOutfit.hasArmor
     self.hasWeapons = storedOutfit.hasWeapons
@@ -30,7 +30,7 @@ function outfit:init(recruitUuId,storedOutfit)
   end
 end
 
-function outfit:buildOutfit(recruit)
+function Outfit:buildOutfit(recruit)
   local items = {}
 
   --get starting weapons
@@ -42,7 +42,7 @@ function outfit:buildOutfit(recruit)
       table.insert(items[slot], variant.items[slot].content)
     end
   end
-  --get starting outfit, building it due to FU not using the items override parameter
+  --get starting Outfit, building it due to FU not using the items override parameter
   local crewConfig = root.npcConfig(recruit.spawnConfig.type).scriptConfig.crew
   local defaultUniform = crewConfig.defaultUniform
   local colorIndex = crewConfig.role.uniformColorIndex
@@ -57,14 +57,14 @@ function outfit:buildOutfit(recruit)
   self.hasArmor, self.hasWeapons, self.emptyHands = crewutil.outfitCheck(items)
   self.items = crewutil.buildItemOverrideTable(items)
   self.planetTypes = {}
-  for k,_ in pairs(wardrobeManager.planetTypes) do
+  for k,_ in pairs(WardrobeManager.planetTypes) do
     self.planetTypes[k] = true
   end
 
   self.name = "default"
 end
 
-function outfit:toJson(skipTypes)
+function Outfit:toJson(skipTypes)
 local json = {}
   json.items = self.items
   json.hasArmor = self.hasArmor
@@ -75,7 +75,7 @@ local json = {}
   return json
 end
 
-function outfit:overrideParams(parameters)
+function Outfit:overrideParams(parameters)
   local items = self.items
   parameters.items = items
   if path(parameters.scriptConfig,"initialStorage","crewUniform") then
@@ -92,31 +92,31 @@ function outfit:overrideParams(parameters)
   return parameters
 end
 
-function wardrobe.new(...)
-  local self = setmetatable({}, wardrobe)
+function Wardrobe.new(...)
+  local self = setmetatable({}, Wardrobe)
   self:init(...)
   return self
 end
 
-function wardrobe:init(recruitUuId, storedWardrobe)
+function Wardrobe:init(recruitUuId, storedWardrobe)
   storedWardrobe = storedWardrobe or storage.wardrobes[recruitUuId]
   self.outfits = {}
   self:loadOutfits(recruitUuId, storedWardrobe)
   self.outfitMap = self:mapOutfits()
 end
 
-function wardrobe:loadOutfits(recruitUuId, storedWardrobe)
+function Wardrobe:loadOutfits(recruitUuId, storedWardrobe)
   if not (storedWardrobe and path(storedWardrobe, "outfits", recruitUuId)) then
-    self.outfits["default"] = outfit.new(recruitUuId)
+    self.outfits["default"] = Outfit.new(recruitUuId)
     return
   end
   for k,v in pairs(storedWardrobe.outfits[recruitUuId]) do
-    self.outfits[k] = outfit.new(recruitUuId, v)
+    self.outfits[k] = Outfit.new(recruitUuId, v)
   end
 end
 
 
-function wardrobe:toJson()
+function Wardrobe:toJson()
   local json = {outfits = {}}
   json.outfitMap = self.outfitMap
   for k,v in pairs(self.outfits) do
@@ -126,17 +126,17 @@ function wardrobe:toJson()
   -- body
 end
 
-function wardrobe:_getOutfit()
-  local outfitName = self.outfitMap[wardrobeManager.planetType] or "default"
+function Wardrobe:_getOutfit()
+  local outfitName = self.outfitMap[WardrobeManager.planetType] or "default"
   return self.outfits[outfitName]
 end
 
 
-function wardrobe:mapOutfits(recruitUuId)
+function Wardrobe:mapOutfits(recruitUuId)
   local outfitMap = {}
-  for planet,_ in pairs(wardrobeManager.planetTypes) do
-    for outfitName, outfit in pairs(self.outfits) do
-      if outfit.planetTypes[planet] then
+  for planet,_ in pairs(WardrobeManager.planetTypes) do
+    for outfitName, Outfit in pairs(self.outfits) do
+      if Outfit.planetTypes[planet] then
         outfitMap[planet] = outfitName
       end
     end
@@ -179,10 +179,10 @@ local function clearStorage(args)
 	end
 end
 
-function wardrobeManager:init()
+function WardrobeManager:init()
   clearStorage({"baseOutfit"})
-  message.setHandler("wardrobeManager.getStorage",localHandler(getStorageWardrobe))
-  message.setHandler("wardrobeManager.setStorage",localHandler(setStorageWardrobe))
+  message.setHandler("WardrobeManager.getStorage",localHandler(getStorageWardrobe))
+  message.setHandler("WardrobeManager.setStorage",localHandler(setStorageWardrobe))
   message.setHandler("debug.clearStorage", localHandler(clearStorage))
   if not storage.wardrobes then storage.wardrobes = {} end
   self.planetTypes = crewutil.getPlanetTypes()
@@ -191,43 +191,43 @@ function wardrobeManager:init()
   if recruitSpawner then
     self.wardrobes = {}
     for uuid,_ in pairs(recruitSpawner.followers) do
-      self.wardrobes[uuid] = wardrobe.new(uuid) 
+      self.wardrobes[uuid] = Wardrobe.new(uuid) 
     end
     for uuid,_ in pairs(recruitSpawner.shipCrew) do
-      self.wardrobes[uuid] = wardrobe.new(uuid) 
+      self.wardrobes[uuid] = Wardrobe.new(uuid) 
     end
   else
     
   end
-  promises:add(wardrobeManager)
+  promises:add(WardrobeManager)
 end
 
-function wardrobeManager:update(dt)
+function WardrobeManager:update(dt)
   return false
 end
-wardrobeManager.finished = wardrobeManager.update
+WardrobeManager.finished = WardrobeManager.update
 
 --first, clean up any residual outfits from crew.
-function wardrobeManager:storeWardrobes()
-  for uuid, wardrobe in pairs(self.wardrobes) do
+function WardrobeManager:storeWardrobes()
+  for uuid, Wardrobe in pairs(self.wardrobes) do
     if recruitSpawner:getRecruit(uuid) then
       --storage.wardrobes[uuid] = {}
-      storage.wardrobes[uuid] = wardrobe:toJson()
+      storage.wardrobes[uuid] = Wardrobe:toJson()
     else
       storage.wardrobes[uuid] = nil
     end
   end
 end
 
-function wardrobeManager:getOutfit(uuid)
-  local wardrobe = self.wardrobes[uuid]
-  return wardrobe:_getOutfit(self.planetType)
+function WardrobeManager:getOutfit(uuid)
+  local Wardrobe = self.wardrobes[uuid]
+  return Wardrobe:_getOutfit(self.planetType)
 end
 
 function Recruit:_spawn(position, parameters)
-  local outfit = wardrobeManager:getOutfit(self.podUuid)
-  if outfit then
-    outfit:overrideParams(parameters)
+  local Outfit = WardrobeManager:getOutfit(self.podUuid)
+  if Outfit then
+    Outfit:overrideParams(parameters)
   end
   dLogJson(parameters, "Recruit: Spawn: ", true)
   return world.spawnNpc(position, self.spawnConfig.species,  self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
@@ -258,12 +258,12 @@ end
 local oldInitCE = init
 function init()	
 	local returnValue = oldInitCE()
- 	wardrobeManager:init()
+ 	WardrobeManager:init()
  	return returnValue
 end
 
 local oldUninitCE = uninit
 function uninit()
-	wardrobeManager:storeWardrobes()
+	WardrobeManager:storeWardrobes()
  	return oldUninitCE()
 end
