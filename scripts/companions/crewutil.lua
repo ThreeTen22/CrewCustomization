@@ -1,4 +1,6 @@
 require "/npcs/timers.lua"
+require "/scripts/util.lua"
+
 dComp = {}
 crewutil = {
   weapSlots = {"primary","sheathedprimary","alt","sheathedalt"},
@@ -283,6 +285,10 @@ function crewutil.subTableElementEqualsValue(t, subTableKey, value, returnKey)
     end
   end
   return false
+end
+
+function hasPath(obj,  pathTable)
+  return (obj and path(obj, table.unpack(pathTable)))
 end
 
 --FUNCTIONS TO REMEMBER--

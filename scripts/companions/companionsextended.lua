@@ -7,6 +7,30 @@ WardrobeManager = {}
 Wardrobe = {}
 Wardrobe.__index = Wardrobe
 
+Uniform = {
+  uniformItems = {}
+}
+
+Uniform.__index = Uniform
+
+function Uniform.new(...)
+  local self = setmetatable({}, Uniform)
+  self:init(...)
+  return self
+end
+
+function Uniform:init(recruitUuId,storedUniform)
+  if storedOutfit then
+    self.hasArmor = storedOutfit.hasArmor
+    self.hasWeapons = storedOutfit.hasWeapons
+    self.emptyHands = storedOutfit.emptyHands
+    self.items = storedOutfit.items
+    self.name = storeOutfit.name
+  else
+    local recruit = recruitSpawner:getRecruit(recruitUuId)
+    self:buildUniform(recruit)
+  end
+end
 
 Outfit = {}
 Outfit.__index = Outfit
@@ -21,9 +45,10 @@ function Outfit:init(recruitUuId,storedOutfit)
   if storedOutfit then
     self.hasArmor = storedOutfit.hasArmor
     self.hasWeapons = storedOutfit.hasWeapons
+    self.emptyHands = storedOutfit.emptyHands
     self.items = storedOutfit.items
-    self.planetTypes = storeOutfit.planetTypes
     self.name = storeOutfit.name
+    self.planetTypes = storeOutfit.planetTypes
   else
     local recruit = recruitSpawner:getRecruit(recruitUuId)
     self:buildOutfit(recruit)
@@ -60,7 +85,6 @@ function Outfit:buildOutfit(recruit)
   for k,_ in pairs(WardrobeManager.planetTypes) do
     self.planetTypes[k] = true
   end
-
   self.name = "default"
 end
 
@@ -87,8 +111,7 @@ function Outfit:overrideParams(parameters)
   if path(parameters.scriptConfig,"crew","uniform") then
     parameters.scriptConfig.crew.uniform = {slots = {}}
   end
-  setPath(parameters.scriptConfig, "behaviorConfig", "emptyHands", self.emptyHands)
-  
+  setPath(parameters.scriptConfig, "behaviorConfig", "emptyHands", (self.emptyHands == true))
   return parameters
 end
 
@@ -256,14 +279,26 @@ end
 
 
 local oldInitCE = init
+
 function init()	
 	local returnValue = oldInitCE()
  	WardrobeManager:init()
  	return returnValue
 end
 
-local oldUninitCE = uninit
+local oldUninitCE = uninit;
+
 function uninit()
 	WardrobeManager:storeWardrobes()
  	return oldUninitCE()
+end
+
+function offerUniformUpdate(recruitUuid, entityId)
+	local recruit = recruitSpawner:getRecruit(recruitUuid)
+  if not recruit then return end
+  local config = getAsset("/objects/crew/outfitpane.config", nil)
+
+	player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
+
+	promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow", true))
 end
