@@ -297,8 +297,7 @@ function offerUniformUpdate(recruitUuid, entityId)
 	local recruit = recruitSpawner:getRecruit(recruitUuid)
   if not recruit then return end
   local config = getAsset("/objects/crew/outfitpane.config", nil)
-
-	player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
-
-	promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow", true))
+  if config then
+	  player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
+  end
 end

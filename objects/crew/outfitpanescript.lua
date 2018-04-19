@@ -32,7 +32,7 @@ end
 
 
 function init()
-	if not storage then storage = {} end
+	if not storage then storage = {} end;
 	self = config.getParameter("initVars")
 	self.itemBagStorage = widget.itemGridItems("itemGrid")
 	self.clearingList = false
@@ -40,10 +40,9 @@ function init()
 	refreshManager:init()
 	visibilityManager:init()
 	outfitManager:loadPlayer(1)
-	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), outfitInit)
-	return
+	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), outfitInit);
 end
-
+ 
 function update(dt)
 	promises:update()
 	timer.tick(dt)
