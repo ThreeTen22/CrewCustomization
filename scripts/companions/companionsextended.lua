@@ -167,10 +167,10 @@ function Wardrobe:mapOutfits(recruitUuId)
   return outfitMap
 end
 
-local function getStorageWardrobe()
+function getStorageWardrobe()
   dLog("companions:  gettingStorageWardrobe")
   local baseOutfit = {}
-  local crew = {}
+  local crewmembers = {}
   local playerInfo = storage.playerInfo or {}
 
   for k,v in pairs(storage.baseOutfit or {}) do
@@ -183,13 +183,13 @@ local function getStorageWardrobe()
     		crewmember.npcType = recruit.spawnConfig.type
     		crewmember.podUuid = recruit.podUuid
     		crewmember.uniqueId = recruit.uniqueId
-  	crew[recruit.podUuid] = crewmember
+  	crewmembers[#crewmembers+1] = crewmember
   end)
 
-  return {baseOutfit = baseOutfit, crew = crew, playerInfo = playerInfo}
+  return {baseOutfit = baseOutfit, crewmembers = crewmembers, playerInfo = playerInfo}
 end
 
-local function setStorageWardrobe(args)
+function setStorageWardrobe(args)
 	dLogJson(args, "SET STORAGE:")
 	for k,v in pairs(args) do
 		storage[k] = v
@@ -298,6 +298,7 @@ function offerUniformUpdate(recruitUuid, entityId)
   if not recruit then return end
   local config = getAsset("/objects/crew/outfitpane.config", nil)
   if config then
-	  player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
+    player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
+    promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow", true))
   end
 end

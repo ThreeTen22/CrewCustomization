@@ -32,22 +32,30 @@ end
 
 
 function init()
+	self.alive = true
 	if not storage then storage = {} end;
-	self = config.getParameter("initVars")
-	self.itemBagStorage = widget.itemGridItems("itemGrid")
-	self.clearingList = false
-	outfitManager:init()
-	refreshManager:init()
-	visibilityManager:init()
-	outfitManager:loadPlayer(1)
-	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), outfitInit);
 end
  
-function update(dt)
+
+
+function initUpdate(dt)
+	local response = world.callScriptedEntity(player.uniqueId(), "getStorageWardrobe")
+	self.crewmembers = response.crewmembers
+
+	dLogJson(response, "callScriptedEntity:  ")
+
+	update = mainUpdate
+end
+
+update = initUpdate
+
+function mainUpdate(dt)
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
 end
+
+
 
 function outfitInit(args)
 	dLogJson("updateInit", args, true)
@@ -61,20 +69,14 @@ function outfitInit(args)
 	listOutfits()
 	updatePortrait()
 
-	update = updateMain
+	promises:add(world.sendEntityMessage(player,id(), "wardrobeManager.getStorage"), 
+	function(...) 
+		update = updateMain
+	end)
 end
 
 function updateMain()
-	local itemBag = widget.itemGridItems("itemGrid")
-	if checkForItemChanges(itemBag) then
-		local outfit = outfitManager:getSelectedOutfit()
-		if outfit then
-			outfit.items = itemBag
-			refreshManager:queue("updatePortrait", updatePortrait)
-		end
-		
-	end
-	self.itemBagStorage = widget.itemGridItems("itemGrid")
+
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
@@ -153,8 +155,8 @@ function crewmember:init(stored)
 	self.podUuid = stored.podUuid
 	self.npcType = stored.npcType
 	self.identity = stored.identity
-	self.portrait = stored.portrait
 	self.uniqueId = stored.uniqueId
+	self.portrait = stored.portrait or self:getPortrait("head")
 end
 
 function crewmember:getPortrait(portraitType, naked)
@@ -338,7 +340,7 @@ function updatePortrait(crewId)
 		num = num+1
 	end
 end
-
+--[[
 function outfitSelected()
 	if self.clearingList then return end
 	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
@@ -407,7 +409,7 @@ function listOutfits(filter)
 		end
 	end
 end
-
+]]--
 function getPlayerIdentity(portrait)
 	local self = {}
 	self.species = player.species()
@@ -473,7 +475,7 @@ function getPlayerIdentity(portrait)
 	end
 	return self
 end
-
+--[[
 function checkForItemChanges(itemBag)
 	local contentsChanged = false
     for i = 1, self.slotCount do
@@ -488,17 +490,7 @@ function checkForItemChanges(itemBag)
     end
     return contentsChanged
 end
-
-function inCorrectSlot(index, itemDescription)
-  local success, itemType = pcall(root.itemType, itemDescription.name)
-  if success then 
-    if itemType == self.itemSlotType[index] then
-      return true
-    end
-  end
-  return false
-end
-
+--]]
 
 function updateOutfitName(id, data)
 	local outfitUuid = data or widget.getData(id)
@@ -509,24 +501,24 @@ function updateOutfitName(id, data)
 		outfitManager:setDisplayName(outfitUuid, text)
 		widget.setText(subWidgetPath:format(listItem, "title"), text)
 end
-
+--[[
 function deleteOutfit()
 	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
 	local items = widget.itemGridItems("itemGrid")
 	dLogJson(items, "deleteOutfit - ITEMS")
-	---[[
+
 	for k, v in pairs(items) do
 		if k and v then
 			player.giveItem(v)
 		end
 	end
-	--]]
+
 	world.containerTakeAll(pane.containerEntityId())
 	outfitManager:deleteSelectedOutfit()
 	visibilityManager:setVisible("outfitRect", false)
 	refreshManager:queue("listOutfits", listOutfits)
 end	
-
+]]--
 
 function uninit()
 	storage.baseOutfit = {}
