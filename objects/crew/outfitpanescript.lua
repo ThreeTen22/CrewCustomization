@@ -2,6 +2,7 @@ require "/scripts/util.lua"
 require "/scripts/interp.lua"
 require "/scripts/messageutil.lua"
 require "/scripts/companions/crewutil.lua"
+require "/objects/crew/paneManager.lua"
 
 --[[NOTES:
 	timer can be manipulated to use coroutines.  give coroutine as function,  pass coroutine in as variable
@@ -22,14 +23,6 @@ local function getSpeciesPath(species, subPath)
     return string.format("/species/%s.species%s",species,subPath)
 end
 
-local function getSelectedListData(listPath)
-	local itemId = widget.getListSelected(listPath)
-	if itemId then
-		local fullpath = string.format("%s.%s", listPath, itemId)
-		return widget.getData(fullpath)
-	end
-end
-
 
 function init()
 	self.alive = true
@@ -43,7 +36,7 @@ function initUpdate(dt)
 	self.crewmembers = response.crewmembers
 
 	dLogJson(response, "callScriptedEntity:  ")
-
+	script.setUpdateDelta(5)
 	update = mainUpdate
 end
 
@@ -107,6 +100,10 @@ end
 ==  refreshManager ==
 
 --]]
+
+function refreshManager.new(...)
+	local self = setmetatable({}, refreshManager)
+end
 function refreshManager:init()
 	self.updateTable = {}
 end
