@@ -1,6 +1,4 @@
-paneManager = {
-    configDirectory = "/objects/crew/outfitpane.config"
-}
+paneManager = {}
 paneManager.__index = paneManager
 
 function paneManager.new(path)
@@ -10,20 +8,20 @@ function paneManager.new(path)
 end
 
 function paneManager:init(path)
-    self.listPath = path
-    local subWidgets = root.assetJson(self.configDirectory..':'..path)
-    
+	self.layout = path
+	self.listItems = {}
+	self.listPath = self.layout..".scrollArea.list"
 end
 
 function paneManager:addListItem()
 	local newItem = widget.addListItem(self.listPath)
-	table.insert(self.listItems[self.listPath], newItem)
+	table.insert(self.listItems, newItem)
 	return newItem
 end
 
 function paneManager:getListItemIndex(itemId)
 	local output
-	for i,v in pairs(self.listItems[self.listPath]) do
+	for i,v in pairs(self.listItems) do
 		if v == itemId then 
 			output = i
 			break
@@ -33,11 +31,11 @@ function paneManager:getListItemIndex(itemId)
 end
 
 function paneManager:getListItemAtIndex(index)
-	return self.listItems[self.listPath][index]
+	return self.listItems[index]
 end
 
-function paneManager:removeListItem(self.listPath, itemId)
-	local index = self:getListItemIndex(self.listPath, itemId)
+function paneManager:removeListItem(itemId)
+	local index = self:getListItemIndex(itemId)
 	widget.removeListItem(self.listPath, index-1)
 	table.remove(self.listItems[self.listPath], index)
 end
@@ -51,13 +49,6 @@ function paneManager:clearListItems(listPath)
 	widget.clearListItems(listPath)
 	self.listItems[listPath] = {}
 	-- body
-end
-
-function paneManager:init()
-	local config = config.getParameter("paneManager")
-	for k,v in pairs(config) do
-		self[k] = v
-  	end
 end
 
 function paneManager:setVisible(key, bool)
