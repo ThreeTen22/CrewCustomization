@@ -1,21 +1,41 @@
+require "/scripts/companions/crewutil.lua"
+
 paneManager = {}
 paneManager.__index = paneManager
 
 function paneManager.new(path)
-    local self = setmetaTable({}, paneManager)
+    local self = setmetatable({}, paneManager)
     paneManager:init(path)
     return self
 end
 
+
 function paneManager:init(path)
 	self.layout = path
+
+	local config = config.getParameter("gui."..path..".data")
+	assert(config, "bad config path:  "..path)
+
+	self.title = config.title
+	self.scrollArea = config.scrollArea
+	self.list = config.list
+	self.portraitCount = config.portraitCount
+	self.listSubWidgets = config.listSubWidgets
 	self.listItems = {}
-	self.listPath = self.layout..".scrollArea.list"
+	self.listItemPaths = {}
+	dLogJson(config)
+	dLog(self.list)
+	dLog(self.title)
 end
 
 function paneManager:addListItem()
-	local newItem = widget.addListItem(self.listPath)
+	local newItem = widget.addListItem(self.list)
 	table.insert(self.listItems, newItem)
+
+	self.listItemPaths[newItem] = {
+		title = self.listSubWidgets.title:format(newItem),
+		background = self.listSubWidgets.background:format(newItem)
+	}
 	return newItem
 end
 
@@ -36,35 +56,55 @@ end
 
 function paneManager:removeListItem(itemId)
 	local index = self:getListItemIndex(itemId)
-	widget.removeListItem(self.listPath, index-1)
-	table.remove(self.listItems[self.listPath], index)
+	widget.removeListItem(self.list, index-1)
+	table.remove(self.listItems, index)
 end
 
-function paneManager:getListSelected(key)
-	local listPath = self.listPaths[key]
-	return widget.getListSelected(listPath)
+function paneManager:getListSelected()
+	return widget.getListSelected(self.list)
 end
 
-function paneManager:clearListItems(listPath)
-	widget.clearListItems(listPath)
-	self.listItems[listPath] = {}
+function paneManager:clearListItems()
+	self.listItems = {}
+	self.listItemPaths = {}
+	return widget.clearListItems(self.list)
+	
 	-- body
 end
 
-function paneManager:setVisible(key, bool)
-	for _,v in pairs(self.rects[key] or {}) do
-		widget.setVisible(v, bool)
-	end
+function paneManager:setVisible(key, subkey)
+	return false
 end
 
-function paneManager:setPortrait(npcPort, portraits)
-	for num = 1, #npcPort do
-		widget.setImage(portraits[num], npcPort[num].image)
-		widget.setVisible(portraits[num], true)
+function paneManager:setItemTitle(listItem, title)
+	dLogJson(self.listItemPaths[listItem], "listItem, paths: ")
+	local path = self.listItemPaths[listItem].title
+	return widget.setText(path, title)
+end
+
+
+
+function paneManager:setPortrait(npcPort, listItem)
+	local portraitPaths = {}
+	
+	if listItem then
+		for i=1, self.portraitCount do
+			table.insert(portraitPaths, self.listSubWidgets.portrait:format(listItem, i))
+		end
+	else
+		for i=1, self.portraitCount do
+			table.insert(portraitPaths, self.portrait:format(i))
+		end
 	end
 
-	for num = #npcPort+1, #portraits do
-		widget.setVisible(portraits[num], false)
+	local npcPortCount = #npcPort
+	for num = 1, npcPortCount do
+		widget.setImage(portraitPaths[num], npcPort[num].image)
+		widget.setVisible(portraitPaths[num], true)
+	end
+
+	for num = npcPortCount+1, self.portraitCount do
+		widget.setVisible(portraitPaths[num], false)
 	end
 end
 
@@ -86,14 +126,14 @@ function paneManager:getConfig(key, extra, default)
 	return config.getParameter(path, default)
 end
 
-
-function paneManager:setBaseData(listPath, itemPath, subWidgetPath, podUuid, newItem)
-	local data = {}
-	data.listItemId = newItem
-	data.podUuid = podUuid
-	data.listPath = listPath
-	data.itemPath = itemPath
-	data.subWidgetPath = subWidgetPath
-
-	return data
+function paneManager:debugOutput()
+	local done = {}
+	for k,v in ipairs(self) do
+		if done[k] == k then break; end
+		if type(v) ~= 'function' and type(v)~= 'nil' then
+			done[k] = v
+		end
+	end
+	sb.logInfo(self.layout)
+	sb.logJson(done, 1)
 end

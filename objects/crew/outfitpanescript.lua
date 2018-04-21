@@ -26,17 +26,29 @@ end
 
 function init()
 	self.alive = true
+	crewList = paneManager.new("crewLayout")
+	refreshManager:init()
 	if not storage then storage = {} end;
 end
  
 
 
 function initUpdate(dt)
-	local response = world.callScriptedEntity(player.uniqueId(), "getStorageWardrobe")
-	self.crewmembers = response.crewmembers
-
-	dLogJson(response, "callScriptedEntity:  ")
 	script.setUpdateDelta(5)
+
+	promises:add(world.sendEntityMessage(player.id(), "WardrobeManager.getStorage"),
+	function(args)
+		crewmembers = {}
+		for i,v in pairs(args.crewmembers) do
+			crewmembers[i] = crewmember.new(v)
+			local item = crewList:addListItem()
+			crewList:setItemTitle(item, v.name)
+		end
+	end,
+	function()
+		assert(false,  "Entity message returned false!")
+	end
+	)
 	update = mainUpdate
 end
 
@@ -69,11 +81,9 @@ function outfitInit(args)
 end
 
 function updateMain()
-
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
-	return 
 end
 --[[
 
@@ -149,16 +159,16 @@ function crewmember.new(...)
 end
 
 function crewmember:init(stored)
-	self.podUuid = stored.podUuid
-	self.npcType = stored.npcType
+	self.name = stored.name
 	self.identity = stored.identity
+	self.npcType = stored.npcType
+	self.podUuid = stored.podUuid
 	self.uniqueId = stored.uniqueId
 	self.portrait = stored.portrait or self:getPortrait("head")
 end
 
 function crewmember:getPortrait(portraitType, naked)
 	local parameters = {identity = self.identity}
-
 	return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, parameters)
 end
 
@@ -518,6 +528,7 @@ end
 ]]--
 
 function uninit()
+	--[[
 	storage.baseOutfit = {}
 	outfitManager:forEachElementInTable("baseOutfit", function(v)
 		local json = v:toJson()
@@ -525,4 +536,6 @@ function uninit()
 	end)
 	storage.crew = nil
 	world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.setStorage", storage)
+	]]--
+	return nil
 end
