@@ -43,12 +43,15 @@ function initUpdate(dt)
 			crewmembers[i] = crewmember.new(v)
 			local item = crewList:addListItem()
 			crewList:setItemTitle(item, v.name)
+			dLogJson(crewmembers[i].portrait, "portrait:  ")
+			crewList:setPortrait(crewmembers[i].portrait, item)
 		end
 	end,
 	function()
 		assert(false,  "Entity message returned false!")
 	end
 	)
+	
 	update = mainUpdate
 end
 
@@ -425,7 +428,7 @@ function getPlayerIdentity(portrait)
 	
 	
 	local genderInfo = getAsset(getSpeciesPath(self.species, ":genders"))
-
+	
 	util.mapWithKeys(portrait, function(k,v)
 	    local value = v.image:lower()
 
@@ -441,7 +444,6 @@ function getPlayerIdentity(portrait)
 		return {directory = directory, idle = idle, directive = directive}
 	end, portrait)
 
-	
 
 	for k,v in ipairs(portrait) do
 		local found = false

@@ -267,8 +267,7 @@ function crewutil.sortedTablesByValue(t, valueKey)
   end
   if isEmpty(sortedTable) then return nil, nil end
   table.sort(sortedTable)
-  dLogJson(sortedTable, "sortedTable\n")
-  dLogJson(keyTable, "keyTable  ", true)
+
   return sortedTable, keyTable
 end
 
