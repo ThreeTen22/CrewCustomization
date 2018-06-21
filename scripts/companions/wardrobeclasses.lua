@@ -1,8 +1,8 @@
 
-outfitManager, baseOutfit, Crewmember, wardrobeManager, Outfit, Wardrobe  = {}, {}, {}, {}, {}, {}
+outfitManager, Uniform, Crewmember, wardrobeManager, Outfit, Wardrobe  = {}, {}, {}, {}, {}, {}
 
 
-baseOutfit.__index = baseOutfit
+Uniform.__index = Uniform
 Crewmember.__index = Crewmember
 Outfit.__index = Outfit
 Wardrobe.__index = Wardrobe
@@ -17,7 +17,7 @@ end
 
 local function getStorageWardrobe()
 	dLog("companions:  gettingStorageWardrobe")
-	local baseOutfit = storage.baseOutfit or {}
+	local uniform = storage.uniform or {}
 	local crew = {}
 	local wardrobes = storage.wardrobes or {}
 	recruitSpawner:forEachCrewMember(
@@ -30,7 +30,7 @@ local function getStorageWardrobe()
 		crewmember.seed = recruit.spawnConfig.seed
 		crew[recruit.podUuid] = crewmember
 	end)
-	local returnValue = {baseOutfit = baseOutfit, crew = crew, wardrobes = wardrobes}
+	local returnValue = {uniform = uniform, crew = crew, wardrobes = wardrobes}
 	return returnValue
 end
 
@@ -40,6 +40,31 @@ function clearStorage(args)
 	end
 end
 
+--[[
+
+==  Uniform ==
+
+--]]
+function Uniform.new(...)
+	local self = setmetatable({},Uniform)
+	self:init(...)
+	return self
+end
+
+function Uniform:init(stored)
+	stored = stored or config.getParameter("Uniform")
+	self.items = stored.items
+	self.podUuid = stored.podUuid or sb.makeUuid()
+	self.displayName = stored.displayName
+end
+
+function Uniform:toJson()
+	local json = {}
+	json.items = self.items
+	json.podUuid = self.podUuid
+	json.displayName = self.displayName
+	return json
+end
 
 function Outfit.new(...)
 	local self = setmetatable({}, Outfit)
@@ -310,31 +335,7 @@ function Crewmember:swapGender()
 	-- body
 end
 
---[[
 
-==  baseOutfit ==
-
---]]
-function baseOutfit.new(...)
-	local self = setmetatable({},baseOutfit)
-	self:init(...)
-	return self
-end
-
-function baseOutfit:init(stored)
-	stored = stored or config.getParameter("baseOutfit")
-	self.items = stored.items
-	self.podUuid = stored.podUuid or sb.makeUuid()
-	self.displayName = stored.displayName
-end
-
-function baseOutfit:toJson()
-	local json = {}
-	json.items = self.items
-	json.podUuid = self.podUuid
-	json.displayName = self.displayName
-	return json
-end
 
 --[[
 
@@ -381,13 +382,13 @@ function outfitManager:loadPlayer(step)
 end
 
 function outfitManager:setDisplayName(uId, displayName)
-	if self.baseOutfit[uId] then
-		self.baseOutfit[uId].displayName = displayName
+	if self.uniform[uId] then
+		self.uniform[uId].displayName = displayName
 	end
 end
 
-function outfitManager:getBaseOutfit(podUuid)
-	return self.baseOutfit[podUuid]
+function outfitManager:getUniform(podUuid)
+	return self.uniform[podUuid]
 end
 
 function outfitManager:getCrewmember(podUuid)
@@ -404,7 +405,7 @@ end
 
 function outfitManager:deleteOutfit(uId)
 	if uId then
-		self.baseOutfit[uId] = nil
+		self.uniform[uId] = nil
 	end
 end
 
