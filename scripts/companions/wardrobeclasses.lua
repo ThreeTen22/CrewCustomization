@@ -15,11 +15,11 @@ local function setStorageWardrobe(args)
 	end
 end
 
-local function getStorageWardrobe()
+function getStorageWardrobe()
 	dLog("companions:  gettingStorageWardrobe")
 	local uniform = storage.uniform or {}
 	local crew = {}
-	local wardrobes = storage.wardrobes or {}
+	local wardrobes = storage.wardrobe or {}
 	recruitSpawner:forEachCrewMember(
 	function(recruit)
 		local crewmember = {}
@@ -30,8 +30,7 @@ local function getStorageWardrobe()
 		crewmember.seed = recruit.spawnConfig.seed
 		crew[recruit.podUuid] = crewmember
 	end)
-	local returnValue = {uniform = uniform, crew = crew, wardrobes = wardrobes}
-	return returnValue
+	return {uniform = uniform, crew = crew, wardrobe = wardrobe}
 end
 
 function clearStorage(args)
@@ -52,7 +51,7 @@ function Uniform.new(...)
 end
 
 function Uniform:init(stored)
-	stored = stored or config.getParameter("Uniform")
+	stored = stored or config.getParameter("Uniform", {})
 	self.items = stored.items
 	self.podUuid = stored.podUuid or sb.makeUuid()
 	self.displayName = stored.displayName
@@ -176,14 +175,16 @@ end
 
 function Wardrobe:init(recruitUuId, storedWardrobe)
 	storedWardrobe = storedWardrobe or storage.wardrobes[recruitUuId]
+	self.uniform = {}
 	self.outfits = {}
-	self:loadOutfits(recruitUuId, storedWardrobe)
+	self:load(recruitUuId, storedWardrobe)
 	self.outfitMap = self:mapOutfits()
 end
 
-function Wardrobe:loadOutfits(recruitUuId, storedWardrobe)
+function Wardrobe:load(recruitUuId, storedWardrobe)
+
 	if not (storedWardrobe and path(storedWardrobe, "outfits", recruitUuId)) then
-		self.outfits["default"] = Outfit.new(recruitUuId)
+		self.uniform = Uniform.new(recruitUuId)
 		return
 	end
 	for k,v in pairs(storedWardrobe.outfits[recruitUuId]) do
@@ -244,16 +245,16 @@ function wardrobeManager:load()
 	self.wardrobes = {}
 	
 	if recruitSpawner then
-		for uuid,_ in pairs(recruitSpawner.followers) do
+		for uuid,_ in pairs(recruitSpawner.followers or {}) do
 			dLog(uuid,  "wardrobeManager - recruitSpawner")
 			self.wardrobes[uuid] = Wardrobe.new(uuid) 
 		end
-		for uuid,_ in pairs(recruitSpawner.shipCrew) do
+		for uuid,_ in pairs(recruitSpawner.shipCrew or {}) do
 			dLog(uuid,  "wardrobeManager - recruitSpawner")
 			self.wardrobes[uuid] = Wardrobe.new(uuid) 
 		end
 	else
-		for uuid,_ in pairs(outfitManager.crew) do
+		for uuid,_ in pairs(outfitManager.crew or {}) do
 			dLog(uuid,  "wardrobeManager - outfitManager")
 			self.wardrobes[uuid] = Wardrobe.new(uuid) 
 		end
@@ -271,7 +272,7 @@ end
 
 function wardrobeManager:storeWardrobes()
 	for uuid, wardrobe in pairs(self.wardrobes) do
-		if (recruitSpawner and recruitSpawner:getRecruit(uuid)) or (outfitManager and outfitManager.crew[uuid]) then
+		if (recruitSpawner and recruitSpawner:getRecruit(uuid)) or (outfitManager.crew and outfitManager.crew[uuid]) then
 			storage.wardrobes[uuid] = wardrobe:toJson()
   		else
   			storage.wardrobes[uuid] = nil

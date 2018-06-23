@@ -49,7 +49,11 @@ end
 function offerUniformUpdate(recruitUuid, entityId)
 	local recruit = recruitSpawner:getRecruit(recruitUuid)
 	if not recruit then return end
-	player.interact("ScriptPane", getAsset("/objects/crew/outfitpane.config"), entityId)
+  local uiConfig = getAsset("/objects/crew/outfitpane.config")
+  local wardrobeStorage = getStorageWardrobe()
+  uiConfig.wardrobe = wardrobeStorage.wardrobe
+  uiConfig.crew = wardrobeStorage.crew
+	player.interact("ScriptPane", uiConfig, entityId)
 
 	promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow", true))
 end
@@ -57,9 +61,9 @@ end
 
 oldInitCE = init
 function init()	
-	clearStorage({"wardrobes", "crew"})
-	wardrobeManager:init()
-	return oldInitCE()
+  oldInitCE()
+	clearStorage({"wardrobe", "crew"})
+	return wardrobeManager:init()
 end
 
 oldUninitCE = uninit
