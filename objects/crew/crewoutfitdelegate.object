@@ -1,18 +1,17 @@
 {
-  "objectName" : "crewoutfitmanager",
+  "objectName" : "crewoutfitdelegate",
   "tags" : ["misc"],
   "rarity" : "legendary",
-  "description" : "Manage your crewmember's outfit and weapons",
-  "shortdescription" : "The Armory",
+  "description" : "Assign outfits to youself and various crewmebers",
+  "shortdescription" : "The Armory2",
   "subtitle" : "Good luck figuring that out",
   "race" : "generic",
   "price" : 15000,
-  "category" : "Outfit Storage",
+  "category" : "Outfit Delegation",
   "tooltipKind" : "object",
-  "genericDescription" : "It's a thing that does stuff.",
-  "objectType" : "object",
-  "interactAction": "ScriptPane",
-  "interactData" : "/objects/crew/outfitpane.config",
+  "genericDescription" : "Assign outfits to youself and various crewmebers",
+  "objectType" : "container",
+  "slotCount" : 12,
   "openSounds" : ["/sfx/objects/miningchest_open.ogg"],
   "frameCooldown" : 5,
   "autoCloseCooldown" : 3600,
@@ -20,11 +19,12 @@
   "scriptDelta" : 0,
   "smashOnBreak" : false,
   "inventoryIcon" : "backgroundpanel.png?scalenearest=0.5",
+  "isContainer": true,
   "smashable" : false,
   "interactive" : true,
   "orientations" : [
     {
-      "image" : "backgroundpanel.png",
+      "image" : "backgroundpanel.png?setcolor=131313",
       "imagePosition" : [-8, 0],
       "frames" : 1,
       "animationCycle" : 0.5,
@@ -36,7 +36,7 @@
       "anchors" : [ "background" ]
     },
     {
-      "image" : "backgroundpanel.png",
+      "image" : "backgroundpanel.png?setcolor=131313",
       "imagePosition" : [-8, 0],
       "frames" : 1,
       "animationCycle" : 0.5,
@@ -48,6 +48,7 @@
       "spaceScan" : 0.1,
       "anchors" : [ "background" ]
     }
-  ]
+  ],
+  "uiConfig" : "/objects/crew/outfitpane.config"
 }
 

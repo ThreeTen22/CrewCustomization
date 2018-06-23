@@ -1,46 +1,26 @@
 require "/scripts/util.lua"
 require "/scripts/interp.lua"
 require "/scripts/messageutil.lua"
+require "/scripts/companions/wardrobeclasses.lua"
 require "/scripts/companions/crewutil.lua"
-
---[[NOTES:
-	timer can be manipulated to use coroutines.  give coroutine as function,  pass coroutine in as variable
---]]
-outfitManager, baseOutfit, crewmember, refreshManager, visibilityManager = {}, {}, {}, {}, {}
-outfitManager.__index = outfitManager
-baseOutfit.__index = baseOutfit
-crewmember.__index = crewmember
-refreshManager.__index = refreshManager
-visibilityManager.__index = visibilityManager
---[[
-
-==  LOCAL FUNCTIONS ==
-(Will not display in _ENV)
-
---]]
-local function getSpeciesPath(species, subPath)          
-    return string.format("/species/%s.species%s",species,subPath)
-end
-
-local function getSelectedListData(listPath)
-	local itemId = widget.getListSelected(listPath)
-	if itemId then
-		local fullpath = string.format("%s.%s", listPath, itemId)
-		return widget.getData(fullpath)
-	end
-end
-
+require "/scripts/companions/paneutil.lua"
 
 function init()
-	if not storage then storage = {} end
-	self = config.getParameter("initVars")
-	self.itemBagStorage = widget.itemGridItems("itemGrid")
-	self.clearingList = false
+	storage = {}
+	self.itemBagStorage = {}
+	self.reloadingList = false
+	self.outfitListCoroutine = nil
+	paneManager:init()
 	outfitManager:init()
 	refreshManager:init()
-	visibilityManager:init()
+
+	widget.registerMemberCallback("outfitScrollArea.outfitList", "setTitle", setTitle)
+	widget.registerMemberCallback("outfitScrollArea.outfitList", "unfocusWidget", function(id,data) return widget.blur(data.path) end)
+	widget.registerMemberCallback("outfitScrollArea.outfitList", "deleteOutfit", deleteOutfit)
+
 	outfitManager:loadPlayer(1)
-	promises:add(world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.getStorage"), outfitInit)
+	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
+
 	return
 end
 
@@ -50,491 +30,249 @@ function update(dt)
 	refreshManager:update()
 end
 
-function outfitInit(args)
-	dLogJson("updateInit", args, true)
+function initExtended(args)
 	storage.baseOutfit = args.baseOutfit or {}
 	storage.crew = args.crew or {}
+	dLogJson(storage.crew, "STORAGE CREW")
+	storage.wardrobes = args.wardrobes or {}
 
-	outfitManager:loadPlayer(2)
-	outfitManager:load("crew", crewmember)
+	
+	outfitManager:load("crew", Crewmember)
 	outfitManager:load("baseOutfit", baseOutfit)
-	outfitManager:getTailorInfo()
+	outfitManager:loadPlayer(2)
+	local tailor = outfitManager:getTailorInfo()
+	if tailor then
+		promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getOutfit", tailor.podUuid), 
+		    		function(outfit) 
+		    			paneManager:setPortrait(tailor:getPortrait("bust", outfit.items), config.getParameter("tailorRect"))
+		    		end)
+	end
+	wardrobeManager:init()
 	listOutfits()
-	updatePortrait()
+	listCrewmembers()
 
-	update = updateMain
+	--paneManager:setVisible("wardrobeRect", false)
+	--paneManager:setVisible("baseOutfitRect", true)
+
+	--update = updateMain
 end
 
-function updateMain()
-	local itemBag = widget.itemGridItems("itemGrid")
-	if checkForItemChanges(itemBag) then
-		local outfit = outfitManager:getSelectedOutfit()
-		if outfit then
-			outfit.items = itemBag
-			refreshManager:queue("updatePortrait", updatePortrait)
-		end
-		
-	end
-	self.itemBagStorage = widget.itemGridItems("itemGrid")
+function updateMain(dt)
 	promises:update()
 	timer.tick(dt)
 	refreshManager:update()
-	return 
 end
---[[
 
-==  visibilityManager ==
+function outfitSelected(id, data)
+	if self.clearingList == true then return end
+end
 
---]]
+function newOutfit(id, data)
+	self.reloadingList = true
+	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
+	paneManager:clearListItems(listPath)
+	local outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
+	listOutfits()
+	self.reloadingList = false
+end
 
-function visibilityManager:init()
-	local config = config.getParameter("visibilityManager")
-	config.dummy = nil
-	for k,v in pairs(config) do
-		self[k] = v
+function listCrewmembers()
+	self.reloadingList = true
+	local listPath, _, _ = paneManager:getListPaths("wardrobeList")
+	local newItem
+
+	--paneManager:clearListItems(listPath)
+	for podUuid, crewmember in pairs(outfitManager.crew) do
+		newItem = paneManager:addListItem(listPath) 
+		setWardrobeListItemData(newItem, podUuid)
 	end
+	self.reloadingList = false
 end
 
-function visibilityManager:setVisible(key, bool)
-	for _,v in pairs(self[key]) do
-		widget.setVisible(v, bool)
+function setWardrobeListItemData(newItem, podUuid)
+	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("wardrobeList", newItem)
+	local data = {}
+
+	data.podUuid = podUuid
+
+	widget.setData(data.itemPath, data)
+
+	data.path = data.subWidgetPath:format("title")
+	widget.setText(data.path, outfitManager:getCrewmember(podUuid).identity.name)
+	widget.setData(data.path, data)
+end
+
+function crewmemberSelected(id, data)
+	local listPath, dataPath, subWidgetPath = paneManager:getListPaths("wardrobeList")
+	data = widget.getData(dataPath:format(paneManager:getListSelected("wardrobeList")))
+
+	self.reloadingList = true
+	
+	
+	listPath, dataPath, subWidgetPath  = paneManager:getListPaths("wardrobeDetailList")
+	paneManager:clearListItems(listPath)
+
+	for planet, outfitKey in pairs(outfitMap) do
+		local newItem = paneManager:addListItem(listPath)
+		wardrobeDetailItemData(data.podUuid, newItem, itemKey)
 	end
-end
-
---[[
-
-==  refreshManager ==
-
---]]
-function refreshManager:init()
-	self.updateTable = {}
-end
-
-function refreshManager:notQueued(key)
-	return not self.updateTable[key]
-end
-
-function refreshManager:queue(key, func)
-	if self:notQueued(key) then
-		self.updateTable[key] = func
-	end
-end
-
-function refreshManager:update()
-	local updateTable = self.updateTable
-	self.updateTable = {}
-	for _,func in pairs(updateTable) do
-		if type(func) == "function" then
-			func()
-		elseif type(func) == "table" then
-			local args = func.args
-			if func.unpack then
-				func.func(table.unpack(args))
-			else
-				func.func(args)
-			end
-		end
-	end
+	
+	self.reloadingList = false
+	return paneManager:setVisible("wardrobeRect", true)
 	-- body
 end
 
---[[
+function wardrobeDetailItemData(podUuid, newItem, outfitKey)
+		local wardrobe = wardrobeManager.wardrobes[data.podUuid].outfits[outfitKey]
+		local outfitMap = wardrobe.outfitMap
 
-==  crewmember ==
+		local data = paneManager:setBaseData(paneManager:getListPaths("wardrobeDetailList", newItem), podUuid, newItem)
 
---]]
+		data.outfitKey = outfitKey
 
-function crewmember.new(...)
-	local self = setmetatable({},crewmember)
-	self:init(...)
-	return self
+		data.path = subWidgetPath:format("title")
+		widget.setText(data.path, crewutil.getCelestialBiomeNames(planet))
+		widget.setData(data.path, data)
+		data.path = subWidgetPath:format("baseOutfitButton")
+		widget.setText(data.path, outfitKey)
+		widget.setData(data.path, data)
 end
 
-function crewmember:init(stored)
-	self.podUuid = stored.podUuid
-	self.npcType = stored.npcType
-	self.identity = stored.identity
-	self.portrait = stored.portrait
-	self.uniqueId = stored.uniqueId
-end
-
-function crewmember:getPortrait(portraitType, naked)
-	local parameters = {identity = self.identity}
-
-	return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, parameters)
-end
-
---[[
-
-==  baseOutfit ==
-
---]]
-
-function baseOutfit.new(...)
-	local self = setmetatable({},baseOutfit)
-	self:init(...)
-	return self
-end
-
-function baseOutfit:init(stored)
-	stored = stored or {}
-	self.items = stored.items or {}
-	self.podUuid = stored.podUuid or sb.makeUuid()
-	self.displayName = stored.displayName or "-- CHANGE ME --"
-	self.listItem = nil
-end
-
-function baseOutfit:toJson()
-	local json = {}
-	json.items = self.items
-	json.podUuid = self.podUuid
-	json.displayName = self.displayName
-	return json
-end
-
---[[
-
-==  outfitManager ==
-
---]]
-
-function outfitManager:init(...)
-	self.crew = {}
-	self.baseOutfit = {}
-	self.widgetItems = {}
-	self.playerParameters = nil
-	self.listPath = "outfitScrollArea.outfitList"
-	self.dataPath = "outfitScrollArea.outfitList.%s"
-	self.subWidgetPath = "outfitScrollArea.outfitList.%s.%s"
-end
-
-function outfitManager:load(key, class)
-	for k,v in pairs(storage[key]) do
-		self[key][k] = class.new(v)
-	end
-end
-
-function outfitManager:addUnique(key, class, storedValue)
-	local newClass = class.new(storedValue)
-	local uId = newClass.podUuid
-	self[key][uId] = newClass
-	return self[key][uId]
-end
-
-function outfitManager:loadPlayer(step)
-	if step == 1 then
-		status.addEphemeralEffect("nude", 5.0)
-	elseif step == 2 then
-		local initTable = {}
-		local playerUuid = player.uniqueId() 
-		local portrait = world.entityPortrait(player.id(), "bust")
-		initTable.portrait = world.entityPortrait(player.id(), "head")
-
-		status.removeEphemeralEffect("nude") 
-
-		initTable.identity = getPlayerIdentity(portrait)
-		initTable.npcType = "nakedvillager"
-		initTable.podUuid = playerUuid
-		self.playerParameters = copy(initTable)
-		return self:addUnique("crew", crewmember, initTable)
-	end
-end
-
-function outfitManager:setDisplayName(uId, displayName)
-	if self.baseOutfit[uId] then
-		self.baseOutfit[uId].displayName = displayName
-	end
-end
-
-function outfitManager:getBaseOutfit(podUuid)
-	return self.baseOutfit[podUuid]
-end
-
-function outfitManager:getWidgetPaths()
-	return self.listPath, self.dataPath, self.subWidgetPath
-end
-
-function outfitManager:forEachElementInTable(tableName, func)
-	for k,v in pairs(self[tableName]) do
-		if func(v) then
-			return
-		end
-	end
-end
-
-function outfitManager:getSelectedOutfit()
-	local data = getSelectedListData(self.listPath)
-	if data then
-		return self:getBaseOutfit(data)
-	end
-end
-
-function outfitManager:deleteOutfit(uId)
-	if uId then
-		self.baseOutfit[uId] = nil
-	end
-end
-
-function outfitManager:deleteSelectedOutfit()
-	local data = getSelectedListData(self.listPath)
-	return self:deleteOutfit(data)
-end
-
-function outfitManager:getTailorInfo(podUuid)
-	local tailor = nil
-	if podUuid then
-		tailor = self.crew[podUuid]
-	else
-		self:forEachElementInTable("crew", function(recruit)
-		    if recruit.npcType == "crewmembertailor" then
-		    	tailor = recruit
-		    	return true
-		    end
-		end)
-	end
-	if tailor then
-		local uniqueId = tailor.uniqueId
-		promises:add(world.sendEntityMessage(pane.containerEntityId(), "entityportrait", uniqueId, "bust"), setTailorPortrait)
-		world.sendEntityMessage(pane.containerEntityId(), "blinkcrewmember", uniqueId, player.id())
-	end
-end
-
-function setTailorPortrait(npcPort)
-	dLogJson(npcPort, "npcPort")
-	local portraits = config.getParameter("tailorPortraitNames")
-	local num = 1
-	while num <= #npcPort do
-		widget.setImage(portraits[num], npcPort[num].image)
-		widget.setVisible(portraits[num], true)
-		num = num+1
-	end
-	while num <= #portraits do
-		widget.setVisible(portraits[num], false)
-		num = num+1
-	end
-end
-
-function updatePortrait(crewId)
-	crewId = crewId or player.uniqueId()
-	local portraits = config.getParameter("portraitNames")
-	local selectedOutfit = outfitManager:getSelectedOutfit() or {}
-	local npc = outfitManager.crew[crewId] or outfitManager.crew[player.uniqueId{}]
-	local num = 1
-	local parameters = {}
-	parameters.identity = npc.identity
-
-	if selectedOutfit.items then
-		parameters.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(self.itemSlot, selectedOutfit.items))
-	end
-	dLogJson(parameters, "updatePortrait: parameters", true)
-	local npcPort = root.npcPortrait("full", npc.identity.species, "nakedvillager", 1, 1, parameters)
-
-	while num <= #npcPort do
-		widget.setImage(portraits[num], npcPort[num].image)
-		widget.setVisible(portraits[num], true)
-		num = num+1
-	end
-	while num <= #portraits do
-		widget.setVisible(portraits[num], false)
-		num = num+1
-	end
-end
-
-function outfitSelected()
-	if self.clearingList then return end
-	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
-	local data = getSelectedListData(listPath)
-	dCompare("outfitSelected", listPath, data)
-	
-	world.containerTakeAll(pane.containerEntityId())
-	local outfit = outfitManager:getBaseOutfit(data)
-	if not outfit then
-		local newItem = nil
-		local hasUnsavedOutfit, outfitUuid = crewutil.subTableElementEqualsValue(outfitManager.baseOutfit, "displayName", "-- CHANGE ME --", "podUuid")
-		if hasUnsavedOutfit then
-			outfit = outfitManager:getBaseOutfit(outfitUuid)
-			newItem = outfit.listItem
-		else
-			outfit = outfitManager:addUnique("baseOutfit", baseOutfit)
-			newItem = widget.addListItem(listPath)
-			outfit.listItem = newItem
-		end
-		widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
-		widget.setData(dataPath:format(newItem), outfit.podUuid)
-		dLogJson(outfit:toJson(),"NEW OUTFIT MADE:  ", true)
-		return widget.setListSelected(listPath, newItem)
-	end
-	dLogJson(outfit:toJson(), "OUTFIT CHOSEN", true)
-	widget.setText("tbOutfitName", outfit.displayName)
-	widget.setData("btnAcceptOutfitName", outfit.podUuid)
-
-	for i = 1, self.slotCount do
-		local item = outfit.items[i]
-		if item then
-			world.containerItemApply(pane.containerEntityId(), item, i-1)
-		end
-	end
-	refreshManager:queue("updatePortrait", updatePortrait)
-	return visibilityManager:setVisible("outfitRect", true)
-end
 
 function listOutfits(filter)
-	local index = 2
-	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
-	self.clearingList = true
-	widget.clearListItems(listPath)
-	local newItem = widget.addListItem(listPath)
-	widget.setText(subWidgetPath:format(newItem, "title"), "-- NEW --")
-	widget.setData(dataPath:format(newItem), "-- NEW --")
-	local sortedTable, keyTable = crewutil.sortedTablesByValue(outfitManager.baseOutfit, "displayName")
-	self.clearingList = false
-	if not (sortedTable and keyTable) then
-	 	dCompare("nil sortedTable or keyTable", sortedTable, keyTable)
-	 	return 
-	end
-	for i, outfitName in ipairs(sortedTable) do
-		local outfitUuid = keyTable[outfitName]
-		local outfit = outfitManager:getBaseOutfit(outfitUuid)
-
-		if outfitName ~= "-- CHANGE ME --" then
-			if outfitUuid and outfit then
-				newItem = widget.addListItem(listPath)
-				outfitManager:getBaseOutfit(outfitUuid).listItem = newItem
-				widget.setText(subWidgetPath:format(newItem, "title"), outfit.displayName)
-				widget.setData(dataPath:format(newItem), outfitUuid)
-			end
-		else
-			outfitManager.baseOutfit[outfitUuid] = nil
-		end
-	end
-end
-
-function getPlayerIdentity(portrait)
-	local self = {}
-	self.species = player.species()
-	self.gender = player.gender()
-	self.name = world.entityName(player.id())
+	self.reloadingList = true
 	
-	
-	local genderInfo = getAsset(getSpeciesPath(self.species, ":genders"))
+	filter = filter or {}
+	local listPath, itemPath, subWidgetPath = paneManager:getListPaths("outfitList")
+	local sortedRefTable = {}
+	local newItem, sortedKeys = "", {}
 
-	util.mapWithKeys(portrait, function(k,v)
-	    local value = v.image:lower()
-
-	    if value:find("malehead.png", 10, true) then
-			self.personalityHeadOffset = v.position
-		elseif value:find("arm.png",10, true) then
-			self.personalityArmOffset = v.position
-		end
-
-	    value = value:match("/humanoid/.-/(.-)%?addmask=.*")
-	    local directory, idle, directive = value:match("(.+)%.png:(.-)(%?.+)")
-
-		return {directory = directory, idle = idle, directive = directive}
-	end, portrait)
-
-	
-
-	for k,v in ipairs(portrait) do
-		local found = false
-		local directory = v.directory
-		local directive = v.directive
-		if directory:find("/") then
-			local partGroup, partType = directory:match("(.-)/(.+)")
-			if partGroup == "hair" then
-				self.hairGroup = partGroup
-				self.hairType = partType
-				self.hairDirectives = directive
-				found = true 
-			end
-			for _,v in ipairs(genderInfo) do
-				if found then break end
-				for k,v in pairs(v) do
-					if v == partGroup then
-						self[k] = partGroup
-						self[k:gsub("Group","Type")] = partType
-						self[k:gsub("Group","Directives")] = directive
-						found = true 
-						break
-					end
-				end
+	util.each(outfitManager.baseOutfit, 
+	function(podUuid, outfit, output)  
+		if isEmpty(filter) then output = podUuid end  
+		for k,v in pairs(filter) do
+			if outfit[k]:find(v,1,true) then
+				output = podUuid
+			else
+				output = nil
 			end
 		end
-	end
-
-	self.personalityArmIdle = portrait[1].idle
-	for k,v in ipairs(portrait) do
-		local directory = v.directory
-		if directory:find("malebody") then
-			self.personalityIdle = v.idle
-			self.bodyDirectives = v.directive
-		elseif directory:find("emote") then
-			self.emoteDirectives = v.directive
+		table.insert(sortedKeys, output)
+	end)
+	table.sort(sortedKeys, function(i,j) return outfitManager:getBaseOutfit(i).displayName < outfitManager:getBaseOutfit(j).displayName end)
+	--paneManager:clearListItems(listPath)
+	for _,podUuid in ipairs(sortedKeys) do
+		newItem = paneManager:addListItem(listPath)
+		setOutfitListItemData(newItem, podUuid)
+		if outfitManager:getBaseOutfit(podUuid).displayName == "" then
+			local itemId = subWidgetPath:format(newItem, "title")
+			refreshManager:queue("setFocus", function() widget.focus(itemId) end, true)
 		end
 	end
-	return self
+	self.reloadingList = false
 end
 
-function checkForItemChanges(itemBag)
-	local contentsChanged = false
-    for i = 1, self.slotCount do
-      if not compare(self.itemBagStorage[i], itemBag[i]) then
-        if itemBag[i] ~= nil and (not inCorrectSlot(i, itemBag[i])) then
-        	world.containerTakeAt(pane.containerEntityId(), i-1)
-        	player.giveItem(itemBag[i])
-        end
-        contentsChanged = true
-        break
-      end
-    end
-    return contentsChanged
+function setOutfitListItemData(newItem, podUuid)
+	local baseOutfit = outfitManager:getBaseOutfit(podUuid)
+	local data = paneManager:setBaseData(paneManager:getListPaths("outfitList", newItem), podUuid, newItem)
+
+	widget.setData(data.itemPath, data)
+
+	data.path = data.subWidgetPath:format("title")
+	widget.setText(data.path, baseOutfit.displayName)
+	widget.setData(data.path, data)
+
+	data.path = data.subWidgetPath:format("btnDelete")
+	widget.setData(data.path, data)
+	local text = data.subWidgetPath:format("listNumber"), paneManager:getListItemIndex(data.listPath, data.listItemId);
+	widget.setText()
+
+	for k, v in pairs(crewutil.itemSlots) do
+		data.path = data.subWidgetPath:format("itemSlotRect."..v)
+		widget.setData(data.path, data)
+		widget.setItemSlotItem(data.path, baseOutfit.items[v])
+	end
+	return refreshManager:queue(data.listItemId, {func = updateListItemPortrait, args = data})
 end
 
-function inCorrectSlot(index, itemDescription)
-  local success, itemType = pcall(root.itemType, itemDescription.name)
-  if success then 
-    if itemType == self.itemSlotType[index] then
-      return true
-    end
-  end
-  return false
+
+function changeOufit(id, data)
+	local position = widget.getPosition(data.path)
+	return true
 end
 
-
-function updateOutfitName(id, data)
-	local outfitUuid = data or widget.getData(id)
-	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
-	local listItem = widget.getListSelected(listPath)
-	local text = widget.getText("tbOutfitName") or "nil"
-		dCompare("updateOutfitName", id, data)
-		outfitManager:setDisplayName(outfitUuid, text)
-		widget.setText(subWidgetPath:format(listItem, "title"), text)
-end
-
-function deleteOutfit()
-	local listPath, dataPath, subWidgetPath = outfitManager:getWidgetPaths()
-	local items = widget.itemGridItems("itemGrid")
-	dLogJson(items, "deleteOutfit - ITEMS")
-	---[[
+function deleteOutfit(id, data)
+	local output = {}
+	for k,v in pairs(outfitManager.baseOutfit) do
+		output[k] = v.podUuid
+	end
+	local items = outfitManager:getBaseOutfit(data.podUuid).items
 	for k, v in pairs(items) do
 		if k and v then
 			player.giveItem(v)
 		end
 	end
-	--]]
-	world.containerTakeAll(pane.containerEntityId())
-	outfitManager:deleteSelectedOutfit()
-	visibilityManager:setVisible("outfitRect", false)
-	refreshManager:queue("listOutfits", listOutfits)
+	outfitManager:deleteOutfit(data.podUuid)
+	dLog(data.listItemId, "deletingOutfit: ")
+	return paneManager:removeListItem(data.listPath, data.listItemId)
 end	
 
 
+function slotSelected(id, data, doExchange)
+	if player.swapSlotItem() == widget.itemSlotItem(data.path) then return end
+	if doExchange then
+		exchangeSlotItem(player.swapSlotItem(), widget.itemSlotItem(data.path), data.path)
+	else
+		player.giveItem(widget.itemSlotItem(data.path))
+		widget.setItemSlotItem(data.path, nil)
+	end
+	outfitManager:getBaseOutfit(data.podUuid).items[id] = widget.itemSlotItem(data.path)
+
+	return refreshManager:queue(data.listItemId, {func = updateListItemPortrait, args = data})
+end
+
+function updateListItemPortrait(data)
+	local outfit = outfitManager:getBaseOutfit(data.podUuid)
+	local npcPort = outfitManager.crew[player.uniqueId()]:getPortrait("full", crewutil.buildItemOverrideTable(crewutil.formatItemBag(outfit.items, false)))
+	npcPort = crewutil.portraitToMannequin(npcPort)
+	
+	local portraitRect = config.getParameter("portraitRect")
+	for i,v in ipairs(portraitRect) do
+		portraitRect[i] = data.subWidgetPath:format(v)
+	end
+	return paneManager:setPortrait(npcPort, portraitRect)
+end
+
+
+function setTitle(id, data)
+	if not self.reloadingList then
+		local text = widget.getText(data.path)
+		outfitManager:setDisplayName(data.podUuid, text)
+	end
+end
+
+function inCorrectSlot(index, itemDescription)
+	local success, itemType = pcall(root.itemType, itemDescription.name)
+	if success then 
+		if itemType == crewutil.itemSlotType[index] then
+			return true
+		end
+	end
+	return false
+end
+
 function uninit()
 	storage.baseOutfit = {}
-	outfitManager:forEachElementInTable("baseOutfit", function(v)
-		local json = v:toJson()
-		storage.baseOutfit[v.podUuid] = json
+	outfitManager:forEachElementInTable("baseOutfit", function(v)                        
+		if not isEmpty(v.items) then
+			if v.displayName == "" then 
+				v.displayName = v.podUuid:sub(1, 6)
+			end
+			storage.baseOutfit[v.podUuid] = v:toJson()   
+		end
 	end)
 	storage.crew = nil
-	world.sendEntityMessage(pane.playerEntityId(), "wardrobeManager.setStorage", storage)
+
+	--world.sendEntityMessage(player.id(), "wardrobeManager.setStorage", storage)
+    world.sendEntityMessage(pane.sourceEntity(), "recruit.confirmUnfollow", true)
 end
