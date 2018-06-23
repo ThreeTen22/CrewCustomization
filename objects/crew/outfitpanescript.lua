@@ -13,14 +13,14 @@ function init()
 	paneManager:init()
 	outfitManager:init()
 	refreshManager:init()
-
+	--[[
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "setTitle", setTitle)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "unfocusWidget", function(id,data) return widget.blur(data.path) end)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "deleteOutfit", deleteOutfit)
 
 	outfitManager:loadPlayer(1)
 	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
-
+	]]
 	return
 end
 
@@ -30,6 +30,11 @@ function update(dt)
 	refreshManager:update()
 end
 
+do
+	
+
+end
+--[[
 function initExtended(args)
 	storage.baseOutfit = args.baseOutfit or {}
 	storage.crew = args.crew or {}
@@ -276,3 +281,5 @@ function uninit()
 	--world.sendEntityMessage(player.id(), "wardrobeManager.setStorage", storage)
     world.sendEntityMessage(pane.sourceEntity(), "recruit.confirmUnfollow", true)
 end
+
+--]]
