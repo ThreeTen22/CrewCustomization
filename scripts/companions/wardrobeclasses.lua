@@ -1,5 +1,7 @@
 
-outfitManager, Uniform, Crewmember, wardrobeManager, Outfit, Wardrobe  = {}, {}, {}, {}, {}, {}
+require "scripts/companions/wardrobe.lua"
+
+outfitManager, Uniform, Crewmember, wardrobeManager, Outfit = {}, {}, {}, {}, {}
 
 
 Uniform.__index = Uniform
@@ -17,7 +19,6 @@ end
 
 function getStorageWardrobe()
 	dLog("companions:  gettingStorageWardrobe")
-	local uniform = storage.uniform or {}
 	local crew = {}
 	local wardrobes = storage.wardrobe or {}
 	recruitSpawner:forEachCrewMember(
@@ -30,7 +31,7 @@ function getStorageWardrobe()
 		crewmember.seed = recruit.spawnConfig.seed
 		crew[recruit.podUuid] = crewmember
 	end)
-	return {uniform = uniform, crew = crew, wardrobe = wardrobe}
+	return {crew = crew, wardrobe = wardrobe}
 end
 
 function clearStorage(args)
@@ -41,30 +42,9 @@ end
 
 --[[
 
-==  Uniform ==
+==  Outfit ==
 
 --]]
-function Uniform.new(...)
-	local self = setmetatable({},Uniform)
-	self:init(...)
-	return self
-end
-
-function Uniform:init(stored)
-	stored = stored or config.getParameter("Uniform", {})
-	self.items = stored.items
-	self.podUuid = stored.podUuid or sb.makeUuid()
-	self.displayName = stored.displayName
-end
-
-function Uniform:toJson()
-	local json = {}
-	json.items = self.items
-	json.podUuid = self.podUuid
-	json.displayName = self.displayName
-	return json
-end
-
 function Outfit.new(...)
 	local self = setmetatable({}, Outfit)
 	self:init(...)
@@ -253,11 +233,6 @@ function wardrobeManager:load()
 			dLog(uuid,  "wardrobeManager - recruitSpawner")
 			self.wardrobes[uuid] = Wardrobe.new(uuid) 
 		end
-	else
-		for uuid,_ in pairs(outfitManager.crew or {}) do
-			dLog(uuid,  "wardrobeManager - outfitManager")
-			self.wardrobes[uuid] = Wardrobe.new(uuid) 
-		end
 	end
 end
 wardrobeManager.finished = wardrobeManager.update
@@ -272,7 +247,7 @@ end
 
 function wardrobeManager:storeWardrobes()
 	for uuid, wardrobe in pairs(self.wardrobes) do
-		if (recruitSpawner and recruitSpawner:getRecruit(uuid)) or (outfitManager.crew and outfitManager.crew[uuid]) then
+		if (recruitSpawner and recruitSpawner:getRecruit(uuid)) then
 			storage.wardrobes[uuid] = wardrobe:toJson()
   		else
   			storage.wardrobes[uuid] = nil
