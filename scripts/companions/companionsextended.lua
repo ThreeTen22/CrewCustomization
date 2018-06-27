@@ -27,6 +27,8 @@ end
 
 function Recruit:_spawn(position, parameters)
 	local parameters = self:prepareSpawnParameters()
+
+	sb.logInfo(sb.printJson(parameters, 1))
 	return world.spawnNpc(position, self.spawnConfig.species,  self.spawnConfig.type, parameters.level, self.spawnConfig.seed, parameters)
 end
 
@@ -49,11 +51,7 @@ end
 function offerUniformUpdate(recruitUuid, entityId)
 	local recruit = recruitSpawner:getRecruit(recruitUuid)
 	if not recruit then return end
-  local uiConfig = getAsset("/objects/crew/outfitpanedelegate.config")
-  local wardrobeStorage = getStorageWardrobe()
-  uiConfig.wardrobe = wardrobeStorage.wardrobe
-  uiConfig.crew = wardrobeStorage.crew
-	player.interact("ScriptPane", uiConfig, entityId)
+	player.interact("ScriptPane", "/objects/crew/outfitpanedelegate.config", entityId)
 
 	promises:add(world.sendEntityMessage(entityId, "recruit.confirmFollow", true))
 end
@@ -62,7 +60,9 @@ end
 oldInitCE = init
 function init()	
   	oldInitCE()
-	clearStorage({"wardrobe", "crew", "uniform"})
+	clearStorage({"wardrobe", "crew", "outfit"})
+	Outfits:init()
+	Outfits:load("outfit", Outfit)
 	return wardrobeManager:init()
 end
 

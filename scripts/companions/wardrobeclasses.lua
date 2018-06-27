@@ -1,8 +1,13 @@
 
 require "/scripts/companions/wardrobe.lua"
 
-Outfits, Crewmember, wardrobeManager = {}, {}, {}
+Crewmember, wardrobeManager = {}, {}
 Crewmember.__index = Crewmember
+Outfits = {
+	uniform = {},
+	equipment = {},
+	outfit = {}
+}
 Outfits.__index = Outfits
 wardrobeManager.__index = wardrobeManager
 
@@ -12,23 +17,6 @@ local function setStorageWardrobe(args)
 	for k,v in pairs(args) do
 		storage[k] = v
 	end
-end
-
-function getStorageWardrobe()
-	dLog("companions:  gettingStorageWardrobe")
-	local crew = {}
-	local wardrobes = storage.wardrobe or {}
-	recruitSpawner:forEachCrewMember(
-	function(recruit)
-		local crewmember = {}
-		crewmember.identity = recruit.spawnConfig.parameters.identity
-		crewmember.npcType = recruit.spawnConfig.type
-		crewmember.podUuid = recruit.podUuid
-		crewmember.uniqueId = recruit.uniqueId
-		crewmember.seed = recruit.spawnConfig.seed
-		crew[recruit.podUuid] = crewmember
-	end)
-	return {crew = crew, wardrobe = wardrobe}
 end
 
 function clearStorage(args)
@@ -95,43 +83,28 @@ end
 
 --]]
 
-function Outfits:init(...)
-
-	self.outfits = {}
-	self:load("outfits", Outfit)
-
-	self.playerParameters = nil
+function Outfits.new(key, Class)
+	local self = setmetatable({}, Outfits)
+	self:init(key, Class)
+	return self
 end
 
-function Outfits:load(key, class)
-	dLogJson("LOADING Outfits - LOAD")
+function Outfits:init(key, Class)
+	self.Class = Class or Outfit
+	self:load()
+end
+
+function Outfits:load(key)
 	for k,v in pairs(storage[key] or {}) do
-		self[key][k] = class.new(v)
+		self[key][k] = self.Class.new(v)
 	end
 end
 
-function Outfits:addUnique(key, class, storedValue)
-	local newClass = class.new(storedValue)
-	local uId = newClass.uniqueId
-	self[key][uId] = newClass
-	return self[key][uId]
-end
-
-function Outfits:loadPlayer(step)
-	if step == 1 then
-		status.addEphemeralEffect("nude", 5.0)
-	elseif step == 2 then
-		local initTable = {}
-		local playerUuid = player.uniqueId() 
-		local bustPort = world.entityPortrait(player.id(), "bust")
-		initTable.portrait = world.entityPortrait(player.id(), "head")
-		status.removeEphemeralEffect("nude") 
-		initTable.identity = crewutil.getPlayerIdentity(bustPort)
-		initTable.npcType = "nakedvillager"
-		initTable.podUuid = playerUuid
-		self.playerParameters = copy(initTable)
-		return self:addUnique("crew", Crewmember, initTable)
-	end
+function Outfits:add(key, ...)
+	local newClass = self.Class.new(...)
+	local uuid = newClass.uuid
+	self[key][uuid] = newClass
+	return self[key][uuid]
 end
 
 function Outfits:setDisplayName(uId, displayName)
@@ -140,8 +113,8 @@ function Outfits:setDisplayName(uId, displayName)
 	end
 end
 
-function Outfits:getOutfit(podUuid)
-	return self.outfits[podUuid]
+function Outfits:get(Uuid)
+	return self.outfits[Uuid]
 end
 
 

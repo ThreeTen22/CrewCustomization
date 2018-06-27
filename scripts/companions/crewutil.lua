@@ -190,12 +190,14 @@ function crewutil.buildDirectiveFromIndex(indx, colorOptions)
 	end
 	return directive
 end
-
 function crewutil.buildItemOverrideTable(t)
 	local items = {}
 	local container = nil
 	t = t or {}
 
+	for k,v in pairs(t) do
+		t[k] = {v}
+	end
 	items.override = {}
 	table.insert(items.override, {})
 	container = items.override[1]
@@ -203,10 +205,6 @@ function crewutil.buildItemOverrideTable(t)
 	table.insert(container, {})
 	container = items.override[1][2]
 	table.insert(container, t)
-	for k,v in pairs(t) do
-		local itemArray = {}
-		container[k] = table.insert(itemArray, v)
-	end
 	return items
 end
 

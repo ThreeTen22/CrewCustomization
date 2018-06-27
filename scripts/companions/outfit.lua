@@ -14,9 +14,8 @@ end
 
 function Outfit:init(recruitUuId,storedOutfit)
     if storedOutfit then
-        self.outfitUuid = storedOutfit.outfitUuid
         self.podUuId = recruitUuId
-        self.outfitUuid = storedOutfit.outfitUuid
+        self.uuid = storedOutfit.uuid
 		self.items = storedOutfit.items
         self.name = storeOutfit.name
         self.colorIndex = storedOutfit.colorIndex
@@ -27,9 +26,6 @@ function Outfit:init(recruitUuId,storedOutfit)
 end
 
 function Outfit:buildOutfit(recruit)
-	if recruitSpawner then
-		recruit = recruitSpawner:getRecruit(recruit)
-	end
 	local items = {}
 	local crewConfig, defaultUniform, colorIndex
 	--get starting weapons
@@ -59,11 +55,13 @@ function Outfit:buildOutfit(recruit)
 	self.hasArmor, self.hasWeapons, self.emptyHands = crewutil.outfitCheck(items)
 	self.items = items
     self.name = recruit.spawnConfig.type
-    self.uniqueId = sb.makeUuId()
+    self.uuid = sb.makeUuid()
 end
 
 function Outfit:toJson(skipTypes)
-	local json = {}
+    local json = {}
+    json.podUuId = self.podUuId
+    json.uuid = self.uuid
 	json.items = self.items
 	json.hasArmor = self.hasArmor
 	json.hasWeapons = self.hasWeapons
@@ -74,7 +72,7 @@ end
 
 function Outfit:overrideParams(parameters)
 	local items = self.items
-	parameters.items = items
+	parameters.items = crewutil.buildItemOverrideTable(items)
 	if path(parameters.scriptConfig,"initialStorage","crewUniform") then
 		parameters.scriptConfig.initialStorage.crewUniform = {}
 	end

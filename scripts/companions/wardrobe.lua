@@ -3,7 +3,8 @@ require "/scripts/companions/outfit.lua"
 Wardrobe = {
     itemSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"},
     uniform = {},
-    equipment = {}
+    equipment = {},
+    overrides = {}
 }
 Wardrobe.__index = Wardrobe
 
@@ -14,40 +15,43 @@ function Wardrobe.new(...)
 	return self
 end
 
-function Wardrobe:init(recruitStorageId, storedWardrobe)
-    storedWardrobe = storedWardrobe or storage.wardrobes[recruitStorageId]
-    self.podUuid = recruitStorageId
-	self:load(recruitStorageId, storedWardrobe)
+function Wardrobe:init(recruitUuid, storedWardrobe)
+    storedWardrobe = storedWardrobe or (storage.wardrobe and storage.wardrobe.recruitUuid) or {}
+    self.podUuid = recruitUuid
+	self:load(recruitUuid, storedWardrobe)
 	--self.outfitMap = self:mapOutfits()
 end
 
-function Wardrobe:load(recruitStorageId, storedWardrobe)
-    for biomeType, outfitUuid in pairs(storedWardrobe.uniform) do 
+function Wardrobe:load(recruitUuid, storedWardrobe)
+    for biomeType, outfitUuid in pairs(storedWardrobe.uniform or {}) do 
         self.uniform[biomeType] = outfitUuid
     end
-    for biomeType, outfitUuid in pairs(storedWardrobe.equipment) do 
+    for biomeType, outfitUuid in pairs(storedWardrobe.equipment or {}) do 
         self.equipment[biomeType] = outfitUuid
     end
 
     if isEmpty(self.uniform) then 
-        self.uniform["default"] = outfitManager:addUnique("outfits", recruitStorageId)
+        self.uniform["default"] = Outfits:add("outfit", recruitUuid)
     end
 end
 
 
 function Wardrobe:toJson()
-	local json = {outfits = {}}
+	local json = {uniform = {}, equipment = {}}
 	json.outfitMap = self.outfitMap
-	for k,v in pairs(self.outfits) do
-		json.outfits[k] = v:toJson()
-	end
+	for biomeType,OutfitUuid in pairs(self.uniform) do
+        json.uniform[biomeType] = OutfitUuid
+    end
+    for biomeType,OutfitUuid in pairs(self.equipment) do
+        json.equipment[biomeType] = OutfitUuid
+    end
 	return json
   -- body
 end
 
 function Wardrobe:_getOutfit()
-	local outfitName = "uniform"
-	return self.outfits[outfitName]
+	local outfitName = "default"
+	return self.uniform[outfitName]
 end
 
 
