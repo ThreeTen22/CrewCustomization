@@ -1,10 +1,9 @@
 require "/scripts/companions/outfit.lua"
+
 Wardrobe = {
     itemSlots = {"head","headCosmetic","chest","chestCosmetic","legs","legsCosmetic","back","backCosmetic"},
-    uniform = {
-        follower = {},
-        shipCrew = {}
-    }
+    uniform = {},
+    equipment = {}
 }
 Wardrobe.__index = Wardrobe
 
@@ -15,20 +14,23 @@ function Wardrobe.new(...)
 	return self
 end
 
-function Wardrobe:init(recruitUuId, storedWardrobe)
-    storedWardrobe = storedWardrobe or storage.wardrobes[recruitUuId]
-    self.podUuid = recruitUuId
-	self:load(recruitUuId, storedWardrobe)
+function Wardrobe:init(recruitStorageId, storedWardrobe)
+    storedWardrobe = storedWardrobe or storage.wardrobes[recruitStorageId]
+    self.podUuid = recruitStorageId
+	self:load(recruitStorageId, storedWardrobe)
 	--self.outfitMap = self:mapOutfits()
 end
 
-function Wardrobe:load(recruitUuId, storedWardrobe)
-
-    for k,v in pairs(storedWardrobe.uniform) do 
-        self.uniform[k] = v
+function Wardrobe:load(recruitStorageId, storedWardrobe)
+    for biomeType, outfitUuid in pairs(storedWardrobe.uniform) do 
+        self.uniform[biomeType] = outfitUuid
     end
-    for k,v in pairs(storedWardrobe.overrides) do 
-        self.overrides[k] = v
+    for biomeType, outfitUuid in pairs(storedWardrobe.equipment) do 
+        self.equipment[biomeType] = outfitUuid
+    end
+
+    if isEmpty(self.uniform) then 
+        self.uniform["default"] = outfitManager:addUnique("outfits", recruitStorageId)
     end
 end
 
@@ -44,7 +46,7 @@ function Wardrobe:toJson()
 end
 
 function Wardrobe:_getOutfit()
-	local outfitName = self.outfitMap[wardrobeManager.planetType] or "default"
+	local outfitName = "uniform"
 	return self.outfits[outfitName]
 end
 

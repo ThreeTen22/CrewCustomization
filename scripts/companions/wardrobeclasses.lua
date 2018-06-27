@@ -1,10 +1,11 @@
 
 require "/scripts/companions/wardrobe.lua"
 
-outfitManager, Crewmember, wardrobeManager = {}, {}, {}
+Outfits, Crewmember, wardrobeManager = {}, {}, {}
 Crewmember.__index = Crewmember
-outfitManager.__index = outfitManager
+Outfits.__index = Outfits
 wardrobeManager.__index = wardrobeManager
+
 
 local function setStorageWardrobe(args)
 	dLogJson(args, "SET STORAGE:")
@@ -85,92 +86,38 @@ function wardrobeManager:storeWardrobes()
 	end
 end
 
---[[
-
-==  crewmember ==
-
---]]
-function Crewmember.new(...)
-	local self = setmetatable({},Crewmember)
-	self:init(...)
-	return self
-end
-
-function Crewmember:init(stored)
-	self.podUuid = stored.podUuid
-	self.npcType = stored.npcType
-	self.identity = stored.identity
-	self.portrait = stored.portrait
-	self.uniqueId = stored.uniqueId
-	self.seed = stored.seed
-end
-
-function Crewmember:toJson()
-	local json = {
-		podUuid = self.podUuid,
-		npcType = self.npcType,
-		identity = self.identity,
-		portrait = self.portrait,
-		uniqueId = self.uniqueId,
-		seed = self.seed
-	}
-	return json
-end
-
-function Crewmember:getPortrait(portraitType, items)
-	local parameters = {identity = self.identity}
-	parameters.items = items
-
-	return root.npcPortrait(portraitType, self.identity.species, self.npcType, 1, 1, parameters)
-end
-
-function Crewmember:getVariant(items)
-	local parameters = {}
-	parameters.identity = self.identity
-	return root.npcVariant(self.identity.species, self.npcType, 1, self.seed, parameters)
-end
-
-function Crewmember:swapGender()
-	local gender = self.identity.gender or self:getVariant().humanoidIdentity.gender
-	if gender == "female" then 
-		gender = "male"
-	else
-		gender = "female"
-	end
-	self.identity.gender = gender
-	-- body
-end
 
 
 
 --[[
 
-==  outfitManager ==
+==  Outfits ==
 
 --]]
 
-function outfitManager:init(...)
-	self.crew = {}
+function Outfits:init(...)
+
 	self.outfits = {}
-	self.uniforms = {}
+	self:load("outfits", Outfit)
+
 	self.playerParameters = nil
 end
 
-function outfitManager:load(key, class)
-	dLogJson("LOADING OUTFITMANAGER - LOAD")
-	for k,v in pairs(storage[key]) do
+function Outfits:load(key, class)
+	dLogJson("LOADING Outfits - LOAD")
+	for k,v in pairs(storage[key] or {}) do
 		self[key][k] = class.new(v)
 	end
 end
 
-function outfitManager:addUnique(key, class, storedValue)
+function Outfits:addUnique(key, class, storedValue)
 	local newClass = class.new(storedValue)
-	local uId = newClass.podUuid
+	local uId = newClass.uniqueId
 	self[key][uId] = newClass
 	return self[key][uId]
 end
 
-function outfitManager:loadPlayer(step)
+function Outfits:loadPlayer(step)
 	if step == 1 then
 		status.addEphemeralEffect("nude", 5.0)
 	elseif step == 2 then
@@ -187,21 +134,18 @@ function outfitManager:loadPlayer(step)
 	end
 end
 
-function outfitManager:setDisplayName(uId, displayName)
-	if self.uniform[uId] then
-		self.uniform[uId].displayName = displayName
+function Outfits:setDisplayName(uId, displayName)
+	if self.outfits[uId] then
+		self.outfits[uId].displayName = displayName
 	end
 end
 
-function outfitManager:getUniform(podUuid)
-	return self.uniform[podUuid]
+function Outfits:getOutfit(podUuid)
+	return self.outfits[podUuid]
 end
 
-function outfitManager:getCrewmember(podUuid)
-	return self.crew[podUuid]
-end
 
-function outfitManager:forEachElementInTable(tableName, func)
+function Outfits:forEachElementInTable(tableName, func)
 	for k,v in pairs(self[tableName]) do
 		if func(v) then
 		  return
@@ -209,25 +153,8 @@ function outfitManager:forEachElementInTable(tableName, func)
 	end
 end
 
-function outfitManager:deleteOutfit(uId)
+function Outfits:deleteOutfit(uId)
 	if uId then
 		self.uniform[uId] = nil
 	end
 end
-
-function outfitManager:getTailorInfo(podUuid)
-	local tailor = nil
-	if podUuid then
-		tailor = self.crew[podUuid]
-	else
-		self:forEachElementInTable("crew", 
-		function(recruit)
-			if recruit.npcType == "crewmembertailor" then
-				tailor = recruit
-				return true
-			end
-		end)
-	end
-	return tailor
-end
-

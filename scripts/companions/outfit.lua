@@ -13,24 +13,22 @@ function Outfit.new(...)
 end
 
 function Outfit:init(recruitUuId,storedOutfit)
-	if storedOutfit then
-		self.needsBuilding = false
-		self.podUuid = recruitUuId
+    if storedOutfit then
+        self.outfitUuid = storedOutfit.outfitUuid
+        self.podUuId = recruitUuId
+        self.outfitUuid = storedOutfit.outfitUuid
 		self.items = storedOutfit.items
-		self.name = storeOutfit.name
+        self.name = storeOutfit.name
+        self.colorIndex = storedOutfit.colorIndex
 	else
-		local recruit
-		if recruitSpawner then
-			recruit = recruitSpawner:getRecruit(recruitUuId)
-        end
-	end
+        local recruit = recruitSpawner:getRecruit(recruitUuId)
+        self:buildOutfit(recruit)
+    end
 end
 
 function Outfit:buildOutfit(recruit)
 	if recruitSpawner then
 		recruit = recruitSpawner:getRecruit(recruit)
-	else
-		recruit = outfitManager.crew[recruit]
 	end
 	local items = {}
 	local crewConfig, defaultUniform, colorIndex
@@ -40,11 +38,8 @@ function Outfit:buildOutfit(recruit)
 	if recruit.createVariant then
 		variant = recruit:createVariant()
 		crewConfig = root.npcConfig(recruit.spawnConfig.type).scriptConfig.crew or {}
-	else
-		variant = recruit:getVariant({})
-		crewConfig = root.npcConfig(recruit.npcType).scriptConfig.crew or {}
 	end
-	for i, slot in ipairs(crewutil.weapSlots) do
+	for i, slot in ipairs(crewutil.itemSlots) do
 		if variant.items[slot] then
 			items[slot] = variant.items[slot].content
 		end
@@ -58,16 +53,13 @@ function Outfit:buildOutfit(recruit)
 			if item then
 				items[slot] = crewutil.dyeUniformItem(item, colorIndex)
 			end
-		end 
-	end
+        end
+        self.colorIndex = colorIndex
+    end
 	self.hasArmor, self.hasWeapons, self.emptyHands = crewutil.outfitCheck(items)
-	self.items = crewutil.buildItemOverrideTable(crewutil.formatItemBag(items))
-	self.planetTypes = {}
-	for k,_ in pairs(wardrobeManager.planetTypes) do
-		self.planetTypes[k] = true
-	end
-
-	self.name = "default"
+	self.items = items
+    self.name = recruit.spawnConfig.type
+    self.uniqueId = sb.makeUuId()
 end
 
 function Outfit:toJson(skipTypes)
@@ -76,7 +68,6 @@ function Outfit:toJson(skipTypes)
 	json.hasArmor = self.hasArmor
 	json.hasWeapons = self.hasWeapons
 	json.emptyHands = self.emptyHands
-	json.planetTypes = self.planetTypes
 	json.name = self.name
 	return json
 end

@@ -49,7 +49,7 @@ end
 function offerUniformUpdate(recruitUuid, entityId)
 	local recruit = recruitSpawner:getRecruit(recruitUuid)
 	if not recruit then return end
-  local uiConfig = getAsset("/objects/crew/outfitpane.config")
+  local uiConfig = getAsset("/objects/crew/outfitpanedelegate.config")
   local wardrobeStorage = getStorageWardrobe()
   uiConfig.wardrobe = wardrobeStorage.wardrobe
   uiConfig.crew = wardrobeStorage.crew

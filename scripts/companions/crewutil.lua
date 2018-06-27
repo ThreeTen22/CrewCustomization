@@ -257,18 +257,20 @@ function crewutil.indexOfMatch(t, input)
 end
 
 function crewutil.getPlanetTypes()
-	local output = {}
-	--local asset = root.assetJson("/interface/cockpit/cockpit.config:planetTypeToDescription") 
-	local planetTypes = root.assetJson("/terrestrial_worlds.config:planetTypes")
-	for _, planetType in pairs(planetTypes) do
-		for _,biome in pairs(planetType.layers.surface.primaryRegion) do
-			if not output[biome] then 
-				output[biome] = biome
+	local output = copy(crewutil.planetTypes or {})
+	if isEmpty(output) then
+		--local asset = root.assetJson("/interface/cockpit/cockpit.config:planetTypeToDescription") 
+		local planetTypes = root.assetJson("/terrestrial_worlds.config:planetTypes")
+		for _, planetType in pairs(planetTypes) do
+			for _,biome in pairs(planetType.layers.surface.primaryRegion) do
+				if not output[biome] then 
+					output[biome] = biome
+				end
 			end
 		end
-	
+		--cache it to prevent nasty lookups
+		crewutil.planetTypes = copy(output)
 	end
-
 	return output
 	-- body
 end
