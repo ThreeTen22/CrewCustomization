@@ -24,14 +24,7 @@ function update(dt)
                 storage[jsonPath] = nil
             end
         end)
-  
-        onInteraction = function(args)
-            self.interactData.gameState = storage.gameState
-            self.interactData.objectOwner = config.getParameter("owner")
-            self.interactData.sourceId = args.sourceId
-            self.interactData.sourcePosition = args.sourcePosition
-            return {"ScriptPane", self.interactData}
-        end
+        onInteraction = onInteractHook
     end
     if not oldUpdate then
         update = function() end
@@ -39,4 +32,13 @@ function update(dt)
         script.setUpdateDelta(dt)
         update = oldUpdate
     end
+end
+
+function onInteractHook(args)
+    self.interactData = config.getParameter("interactData")
+    self.interactData.gameState = storage.gameState
+    self.interactData.objectOwner = config.getParameter("owner")
+    self.interactData.sourceId = args.sourceId
+    self.interactData.sourcePosition = args.sourcePosition
+    return {"ScriptPane", self.interactData}
 end

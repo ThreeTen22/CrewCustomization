@@ -1,9 +1,10 @@
 
 require "/scripts/companions/wardrobe.lua"
 
-outfitManager, Crewmember, wardrobeManager, Outfit = {}, {}, {}
+outfitManager, Crewmember, wardrobeManager = {}, {}, {}
 Crewmember.__index = Crewmember
-
+outfitManager.__index = outfitManager
+wardrobeManager.__index = wardrobeManager
 
 local function setStorageWardrobe(args)
 	dLogJson(args, "SET STORAGE:")
@@ -53,11 +54,8 @@ function wardrobeManager:update(dt)
 	return false
 end
 
-
 function wardrobeManager:load()
 	self.wardrobes = {}
-	
-	if recruitSpawner then
 		for uuid,_ in pairs(recruitSpawner.followers or {}) do
 			dLog(uuid,  "wardrobeManager - recruitSpawner")
 			self.wardrobes[uuid] = Wardrobe.new(uuid) 
@@ -66,7 +64,6 @@ function wardrobeManager:load()
 			dLog(uuid,  "wardrobeManager - recruitSpawner")
 			self.wardrobes[uuid] = Wardrobe.new(uuid) 
 		end
-	end
 end
 wardrobeManager.finished = wardrobeManager.update
 
