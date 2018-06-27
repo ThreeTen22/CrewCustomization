@@ -1,5 +1,6 @@
 [
     { "op": "add", "path" : "/retainObjectParametersInItem", "value" : true},
     { "op": "add", "path" : "/scripts/-", "value" : "/objects/ancientvault/wallbuttontrigger/extendedinit.lua"},
-    { "op": "add", "path" : "/scriptDelta", "value" : 1}
+    { "op" : "copy","from" : "/orientations/0/image","path" : "/orientations/0/dualImage"},
+    { "op" : "remove","path" : "/orientations/0/image"}
 ]
