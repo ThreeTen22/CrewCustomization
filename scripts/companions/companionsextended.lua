@@ -61,8 +61,8 @@ end
 
 oldInitCE = init
 function init()	
-  oldInitCE()
-	clearStorage({"wardrobe", "crew"})
+  	oldInitCE()
+	clearStorage({"wardrobe", "crew", "uniform"})
 	return wardrobeManager:init()
 end
 

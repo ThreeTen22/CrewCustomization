@@ -1,3 +1,5 @@
 [
-    { "op": "add", "path" : "/retainObjectParametersInItem", "value" : true}
+    { "op": "add", "path" : "/retainObjectParametersInItem", "value" : true},
+    { "op": "add", "path" : "/scripts/-", "value" : "/objects/ancientvault/wallbuttontrigger/extendedinit.lua"},
+    { "op": "add", "path" : "/scriptDelta", "value" : 1}
 ]
