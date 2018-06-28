@@ -15,6 +15,11 @@ end
 ==  paneManager ==
 
 --]]
+function paneManager.new(...)
+	local self = setmetatable({}, paneManager)
+	self:init(...)
+	return self
+end
 
 function paneManager:addListItem(listPath)
 	local newItem = widget.addListItem(listPath)
@@ -86,6 +91,13 @@ function paneManager:getListPaths(key, listId)
 		end
 		return path, path..".%s", path..".%s.%s"
 	end
+end
+
+function paneManager:getPath(key, ...)
+	local args = {...}
+	local path = self.listPaths[key]
+	table.insert(args, 1, path)
+	return table.concat(args, ".")
 end
 
 function paneManager:getConfig(key, extra, default)

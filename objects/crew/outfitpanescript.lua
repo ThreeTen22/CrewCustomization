@@ -10,32 +10,58 @@ function init()
 	self.itemBagStorage = {}
 	self.reloadingList = false
 	self.outfitListCoroutine = nil
-	paneManager:init()
-	outfitManager:init()
+	self.pane = paneManager.new()
 	refreshManager:init()
 
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "setTitle", setTitle)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "unfocusWidget", function(id,data) return widget.blur(data.path) end)
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "deleteOutfit", deleteOutfit)
+
+	widget.registerMemberCallback("outfitScrollArea.outfitList", "expandItem", expandItem)
 	--[[
 	outfitManager:loadPlayer(1)
 	promises:add(world.sendEntityMessage(player.id(), "wardrobeManager.getStorage"), initExtended)
 	]]
+	local list = self.pane:getPath("outfitList")
+	for i = 0, 10 do
+		widget.addListItem(list)
+	end
 	return
 end
 
-function update(dt)
-	promises:update()
-	timer.tick(dt)
-	refreshManager:update()
-end
-
 do
+	function update(dt)
+		promises:update()
+		timer.tick(dt)
+		refreshManager:update()
+	end
+
 	function dismissed()
-		world.sendEntityMessage(pane.sourceEntity(), "recruit.confirmUnfollow", true)
+		world.sendEntityMessage(pane.sourceEntity(), "recruit.confirmUnfollow", false)
 	end
 
 end
+
+do
+
+	function setTitle(id, d)
+		if widget.hasFocus(d.path) then
+			local text = widget.getText(d.path)
+			self.pane:setDisplayName(d.podUuid, text)
+		end
+	end
+
+	function deleteOutfit(id, data)
+
+	end
+
+	function expandItem(id, data)
+		
+	end
+
+
+end
+
 --[[
 function initExtended(args)
 	storage.baseOutfit = args.baseOutfit or {}
@@ -248,14 +274,6 @@ function updateListItemPortrait(data)
 		portraitRect[i] = data.subWidgetPath:format(v)
 	end
 	return paneManager:setPortrait(npcPort, portraitRect)
-end
-
-
-function setTitle(id, data)
-	if not self.reloadingList then
-		local text = widget.getText(data.path)
-		outfitManager:setDisplayName(data.podUuid, text)
-	end
 end
 
 function inCorrectSlot(index, itemDescription)
