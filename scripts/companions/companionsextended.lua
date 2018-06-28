@@ -60,7 +60,7 @@ end
 oldInitCE = init
 function init()	
   	oldInitCE()
-	clearStorage({"wardrobe", "crew", "outfit"})
+	--clearStorage({"wardrobe", "crew", "outfit"})
 	Outfits:init()
 	Outfits:load("outfit", Outfit)
 	return wardrobeManager:init()

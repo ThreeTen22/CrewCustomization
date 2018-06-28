@@ -27,9 +27,13 @@ end
 
 function wardrobeManager:init()
 	if recruitSpawner then
-		message.setHandler("wardrobeManager.getStorage",localHandler(getStorageWardrobe))
-		message.setHandler("wardrobeManager.setStorage",localHandler(setStorageWardrobe))
-		message.setHandler("wardrobeManager.getOutfit", function(_,isLocal,...) if isLocal then return wardrobeManager:getOutfit(...) end; end)
+		message.setHandler("wardrobe.getStorage",localHandler(getStorageWardrobe))
+		message.setHandler("wardrobe.setStorage",localHandler(setStorageWardrobe))
+		message.setHandler("wardrobe.getOutfits", function(_,isLocal,...) 
+			dLogJson(Outfits.outfit, "in handler")
+			return Outfits.outfit 
+		end)
+
 		message.setHandler("debug.clearStorage", localHandler(clearStorage))
 	end
 	if not storage.wardrobes then storage.wardrobes = {} end
@@ -114,7 +118,7 @@ function Outfits:setDisplayName(uId, displayName)
 end
 
 function Outfits:get(Uuid)
-	return self.outfits[Uuid]
+	return self.outfit[Uuid]
 end
 
 
