@@ -11,6 +11,7 @@ function init()
 	self.reloadingList = false
 	self.outfitListCoroutine = nil
 	self.pane = paneManager.new()
+	self.outfits = List.new()
 	refreshManager:init()
 
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "setTitle", setTitle)
@@ -20,12 +21,17 @@ function init()
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "expandItem", expandItem)
 	--[[
 		As a pane menu is both local and not considered an entity in and of itself,  the message will run syncronously. 
-		(Referencing how world.findUniqueEntity() is exploited to quickly determine an npcs existance without explicitly loading it)
+		(Referencing how world.findUniqueEntity() is exploited to quickly determine a player's existance in the world)
 	]]
-	local outfits = sendMsg("wardrobe.getOutfits"):result()
+	local outfits = msgSelf("wardrobe.getOutfits"):result()
 	local list = self.pane:getPath("outfitList")
-	dLogJson(outfits, "in pane")
+
+	--dLogJson(outfits, "in pane")
 	for k,v in pairs(outfits) do 
+		self.outfits:addItem(v)
+	end
+
+	for i=0, 10 do
 		widget.addListItem(list)
 	end
 end
@@ -37,7 +43,7 @@ do
 		refreshManager:update()
 	end
 
-	function uninit()
+	function dismissed()
 		world.sendEntityMessage(pane.sourceEntity(), "recruit.confirmUnfollow", true)
 	end
 
@@ -57,11 +63,17 @@ do
 	end
 
 	function expandItem(id, data)
-
+		local path = data.."."..widget.getListSelected(data)
+		dLog(path)
+		widget.setSize(path, {250, 100})
 	end
 
-	function sendMsg(msg, ...)
+	function msgSelf(msg, ...)
 		return world.sendEntityMessage(player.id(), msg, ...)
+	end
+
+	function msgSource(msg, ...)
+		return world.sendEntityMessage(pane.sourceEntity(), msg, ...)
 	end
 end
 

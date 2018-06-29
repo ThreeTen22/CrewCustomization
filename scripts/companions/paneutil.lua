@@ -6,6 +6,87 @@ refreshManager, paneManager = {}, {}
 refreshManager.__index = refreshManager
 paneManager.__index = paneManager
 
+List = {
+	members = {
+
+	}
+}
+List.__index = List
+
+function List.new(...)
+    local self = {}
+    
+    setmetatable(self, List)
+    self:init(...)
+    return self
+end
+
+function List:init(listConfig)
+    self.items = {}
+    self.itemIdByIndex = {}
+	self.selectedItemId = -1
+	self.listId = "outfitList"
+    self.listPath = "outfitScrollArea.outfitList"
+	self.listLayout = "layouts.outfitList"
+	
+	if type(listConfig) == "string" then
+		listConfig = config.getParameter(listConfig)
+	end
+	if type(listConfig) == "table" then
+		for k,v in pairs(listConfig) do
+			self[k] = v
+		end
+	end
+end
+
+function List:item(id)
+	return self.items[id or -1]
+end
+
+function List:itemAt(index)
+	return self:item(self.itemIdByIndex[index])
+end
+
+function List:selectedItem()
+    return self.items[self.selectedItemId]
+end
+
+function List:setSelectedItem(id)
+    if not id then id = -1 end
+    self.selectedItemId = id
+end
+
+function List:itemInstanceValue(id, jsonPath, default)
+	local item = self:item(id)
+    return sb.jsonQuery(item, jsonPath, default)
+end
+
+function List:addItem(data)
+	local itemId = widget.addListItem(self.listPath)
+	dLog(itemId)
+	self.items[itemId] = data
+	table.insert(self.itemIdByIndex, itemId)
+end
+
+function List:clearItems()
+	widget.clearListItems(self.listPath)
+	self.items = {}
+	self.itemIdByIndex = {}
+end
+
+function List:removeItemAt()
+
+end
+
+function List:Each(func)
+    for k,v in pairs(self.items) do
+        if func(k,v) then
+            return v,k
+        end
+    end
+end
+
+
 function getSpeciesPath(species, subPath)          
 	return string.format("/species/%s.species%s",species,subPath)
 end

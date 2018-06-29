@@ -30,7 +30,6 @@ function wardrobeManager:init()
 		message.setHandler("wardrobe.getStorage",localHandler(getStorageWardrobe))
 		message.setHandler("wardrobe.setStorage",localHandler(setStorageWardrobe))
 		message.setHandler("wardrobe.getOutfits", function(_,isLocal,...) 
-			dLogJson(Outfits.outfit, "in handler")
 			return Outfits.outfit 
 		end)
 
