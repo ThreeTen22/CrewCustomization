@@ -12,6 +12,7 @@ function init()
 	self.outfitListCoroutine = nil
 	self.pane = paneManager.new()
 	self.outfits = List.new()
+	self.bgCanvas = widget.bindCanvas("cvsBackground")
 	refreshManager:init()
 
 	widget.registerMemberCallback("outfitScrollArea.outfitList", "setTitle", setTitle)
